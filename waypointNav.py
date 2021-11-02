@@ -1,14 +1,18 @@
 #*******************************************************************************************************************#
-#  Project: Prescott Yacht Club -
-#  File: simEnviroment.py
+#  Project: Prescott Yacht Club - Autonomous Sailing Project
+#  File: waypointNav.py
 #  Author: Lorenzo Kearns
 #  Versions:
 #   version: 0.1 10/25/2021 - Initial Program Creation
 #   version: 1.0 10/26/2021 - Working map of lynx lake with accurate longitude and lattitude overlay
-#  Purpose: Take power budget stuff and perform simulations over time
+#   version: 2.0 11/01/2021 - Reconfigure of the program without initial startup map, working navigation map which saves longitude
+#                  and lattitude of mouse click. Removed excess code features, renamed variables to be more intuitve, cleaned up code and added comments
+#  Purpose: GUI for selecting waypoints and displaying desired data from boat sensors.
 #*******************************************************************************************************************#
 #
 #
+#****************************************************************#
+# Includes:
 import io
 import numpy as np
 import tkinter as tk
@@ -22,19 +26,7 @@ import cartopy.io.img_tiles as cimgt
 from urllib.request import urlopen, Request
 from tkinter.filedialog import askopenfilename
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-# from cartopy.io.img_tiles import OSM
-#
-#
-def image_spoof(self, tile): # this function pretends not to be a Python script
-    url = self._image_url(tile) # get the url of the street map API
-    req = Request(url) # start request
-    req.add_header('User-agent','Anaconda 3') # add user agent to request
-    fh = urlopen(req)
-    im_data = io.BytesIO(fh.read()) # get image
-    fh.close() # close url
-    img = Image.open(im_data) # open image with PIL
-    img = img.convert(self.desired_tile_form) # set image format
-    return img, self.tileextent(tile), 'lower' # reformat for cartopy
+#****************************************************************#
 #
 #
 #**********************************************************************************************#
@@ -43,50 +35,37 @@ def image_spoof(self, tile): # this function pretends not to be a Python script
 def main():
     global lock
     lock = True
-    cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
-    map = cimgt.OSM()
-    fig = plt.figure(figsize = (8, 6), dpi = 100)
-    ax1 = plt.axes(projection = map.crs)
-    lakeCenter = [34.52, -112.386]
     lonOrig = -112.388989 # set the longitidue at the origin
     latOrig = 34.5150517 # set the lattitude at the origin
-    # maxLon = -112.382011
-    # maxLat = 34.523000
-    extentLat = -0.007983
-    extentLon = 0.006978
-    zoomRatio = 0.005
-    extent = [lakeCenter[1]-(zoomRatio*0.6),lakeCenter[1]+(zoomRatio*0.8),lakeCenter[0]-(zoomRatio),lakeCenter[0]+(zoomRatio*0.6)] # adjust to zoom
-    ax1.set_extent(extent) # set extents
-    scale = np.ceil(-np.sqrt(2)*np.log(np.divide(zoomRatio,350.0))) # empirical solve for scale based on zoom
-    scale = (scale<20) and scale or 19 # scale cannot be larger than 19
-    ax1.add_image(map, int(scale)) # add OSM with zoom specification
-    plt.show() # show the plot
-    # grab mouse position of a tkinter gui
+    extentLat = -0.007983 # set the extent of the lattitude from orgin to edge
+    extentLon = 0.006978 # set the extent of the Longitude from orgin to edge
+        # Create a tkinter object
     root = tk.Tk()
-    #setting up a tkinter canvas
+        #create canvas for the controlCenter
     controlCenter = Canvas(root, width=1920, height=1080)
     controlCenter.pack()
-    #adding the image
-    # File = askopenfilename(parent=root, initialdir="./",title='Select an image')
-    File = 'newLynxLake.png'
+        # process an image for the waypoint selection window
+    File = 'newLynxLake.png' # path to image that shall be used
     original = Image.open(File)
-    # original = original.resize((1000,1000)) #resize image
-    img = ImageTk.PhotoImage(original)
-    controlCenter.create_image(50, 50, image=img, anchor="nw")
-
+    img = ImageTk.PhotoImage(original) # create a Tk image from the file
+    waypointTitle = tk.Label(controlCenter, text = "Waypoint Nav Selection").place(x = 180, y = 10)
+    controlCenter.create_image(30, 30, image=img, anchor="nw") # add the image to the controlCenter canvas
+        # set values for the scaling factor to be used in defining canvas boundaries
     xmt = extentLon
     ymp = extentLat
-    #ask for real PT values at origin
-    # xInitial = tk.simpledialog.askfloat("Longitude", "Longitude at origin")
-    # yInitial = tk.simpledialog.askfloat("Lattitude", "Lattitude at origin")
-
+        # set the initial positions in lat and longitude at the origin
     xInitial = lonOrig
     yInitial = latOrig
-    #instruction on 3 point selection to define grid
+        # give a message to tell the order in which the boundaries of the naviagtion console will be constrained
     tk.messagebox.showinfo("Set plot bounds", "Click Order: \n"
                                                 "1) Origin \n"
                                                 "2) Longitude end \n"
                                                 "3) Lattitude end")
+#********#
+# Ill be real, I Just totally gave up on proper function formatting since they are all in the damn loop.
+#  At some point I think I can put all this into an object using classes or something,
+#   for now avert your eyes future me and pretend there are now functions here
+#
     # Determine the origin by clicking
     def getorigin(eventorigin):
         global x0,y0
@@ -94,7 +73,7 @@ def main():
         y0 = eventorigin.y
         print(x0,y0)
         controlCenter.bind("<Button 1>",getextentx)
-    #mouseclick event
+    # mouseclick event
     controlCenter.bind("<Button 1>",getorigin)
     # Determine the extent of the figure in the x direction (Temperature)
     def getextentx(eventextentx):
@@ -109,28 +88,32 @@ def main():
         print(ye)
         tk.messagebox.showinfo("All good!", "The grid is all good. Start Navigating")
         controlCenter.bind("<Button 1>",printcoords)
+    # print the coords to the console
     def printcoords(event):
         global lock
-        print(lock)
+        # if(lock == True):
         if(lock == False):
             xmpx = xe-x0
             xm = xmt/xmpx
             ympx = ye-y0
             ym = -ymp/ympx
-            #coordinate transformation
+            # Perform coordinate transformation to normalize results
             lonWaypoint = (event.x-x0)*(xm)+xInitial
             latWaypoint = (event.y-y0)*(ym)+yInitial
-            #outputting x and y coords to console
+            #outputting Longitude and Latitude coords to console
             print (lonWaypoint,latWaypoint)
-            lock = True
+            longitude = tk.Label(controlCenter, text = "Selected Longitude: "+ str(lonWaypoint)).place(x = 30, y = 610)
+            lattitude = tk.Label(controlCenter, text = "Selected Lattitude: "+ str(latWaypoint)).place(x = 30, y = 630)
+            lock = True # sets lock after one waypoint selection, to select a new waypoint a fresh click of place waypoint must be done
     def cycleLock():
         global lock
         if (lock == False):
             lock = True
         elif (lock == True):
             lock = False
-    tk.Button(controlCenter, text='Place Waypoint', command = cycleLock).place(x=500,y=100)
-
+        # make a little button boi, he says "Place waypoint" and when clicked allows you to..... Place a waypoint
+    tk.Button(controlCenter, text='Place Waypoint', command = cycleLock).place(x = 460, y = 30)
+        # loop until the code inevitably crashes again because tkinter is ass
     root.mainloop()
 # end of the main function
 #**********************************************************************************************#
@@ -144,15 +127,3 @@ if __name__ == '__main__':
     main()
 # END OF ACTIVE CODE
 #**********************************************************************************************#
-
-
-
-
-
-
-
-
-
-
-
-# CODE GRAVEYARD
