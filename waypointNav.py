@@ -61,6 +61,36 @@ def main():
                                                 "1) Origin \n"
                                                 "2) Longitude end \n"
                                                 "3) Lattitude end")
+    def image_spoof(self, tile): # this function pretends not to be a Python script
+        url = self._image_url(tile) # get the url of the street map API
+        req = Request(url) # start request
+        req.add_header('User-agent','Anaconda 3') # add user agent to request
+        fh = urlopen(req)
+        im_data = io.BytesIO(fh.read()) # get image
+        fh.close() # close url
+        img = Image.open(im_data) # open image with PIL
+        img = img.convert(self.desired_tile_form) # set image format
+        return img, self.tileextent(tile), 'lower' # reformat for cartopy
+    def plotStuff():
+        cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
+        map = cimgt.OSM()
+        fig = plt.figure(figsize = (8, 6), dpi = 100)
+        ax1 = plt.axes(projection = map.crs)
+        lakeCenter = [34.52, -112.386]
+        zoomRatio = 0.005
+        extent = [lakeCenter[1]-(zoomRatio*0.6),lakeCenter[1]+(zoomRatio*0.8),lakeCenter[0]-(zoomRatio),lakeCenter[0]+(zoomRatio*0.6)] # adjust to zoom
+        ax1.set_extent(extent) # set extents
+        scale = np.ceil(-np.sqrt(2)*np.log(np.divide(zoomRatio,350.0))) # empirical solve for scale based on zoom
+        scale = (scale<20) and scale or 19 # scale cannot be larger than 19
+        ax1.add_image(map, int(scale)) # add OSM with zoom specification
+        x = [-112.388989, -112.-112.3857]
+        y = [34.5150517, 34.519631]
+        plt.plot(x, y, 'r--')
+        plt.show() # show the plot
+        plt.gcf().canvas.draw()
+        canvas = FigureCanvasTkAgg(fig, master=controlCenter)
+        canvas.get_tk_widget().grid(row=1,column=24)
+        canvas.draw()
 #********#
 # Ill be real, I Just totally gave up on proper function formatting since they are all in the damn loop.
 #  At some point I think I can put all this into an object using classes or something,
@@ -102,8 +132,8 @@ def main():
             latWaypoint = (event.y-y0)*(ym)+yInitial
             #outputting Longitude and Latitude coords to console
             print (lonWaypoint,latWaypoint)
-            longitude = tk.Label(controlCenter, text = "Selected Longitude: "+ str(lonWaypoint)).place(x = 30, y = 610)
-            lattitude = tk.Label(controlCenter, text = "Selected Lattitude: "+ str(latWaypoint)).place(x = 30, y = 630)
+            longitude = tk.Label(controlCenter, text = "Selected Longitude: "+ str(lonWaypoint)+ "              ").place(x = 30, y = 610)
+            lattitude = tk.Label(controlCenter, text = "Selected Lattitude: "+ str(latWaypoint) + "             ").place(x = 30, y = 630)
             lock = True # sets lock after one waypoint selection, to select a new waypoint a fresh click of place waypoint must be done
     def cycleLock():
         global lock
@@ -113,6 +143,7 @@ def main():
             lock = False
         # make a little button boi, he says "Place waypoint" and when clicked allows you to..... Place a waypoint
     tk.Button(controlCenter, text='Place Waypoint', command = cycleLock).place(x = 460, y = 30)
+    tk.Button(controlCenter, text='Show real Plot', command = plotStuff). place(x = 460, y = 60)
         # loop until the code inevitably crashes again because tkinter is ass
     root.mainloop()
 # end of the main function
