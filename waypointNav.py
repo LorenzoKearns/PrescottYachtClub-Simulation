@@ -25,7 +25,7 @@ import cartopy.feature as cfeature
 import cartopy.io.img_tiles as cimgt
 from urllib.request import urlopen, Request
 from tkinter.filedialog import askopenfilename
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+# from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 #****************************************************************#
 #
 #
@@ -51,8 +51,8 @@ def main():
     waypointTitle = tk.Label(controlCenter, text = "Waypoint Nav Selection").place(x = 180, y = 10)
     controlCenter.create_image(30, 30, image=img, anchor="nw") # add the image to the controlCenter canvas
         # set values for the scaling factor to be used in defining canvas boundaries
-    xmt = extentLon
-    ymp = extentLat
+    xmLon = extentLon
+    ymLat = extentLat
         # set the initial positions in lat and longitude at the origin
     xInitial = lonOrig
     yInitial = latOrig
@@ -123,10 +123,10 @@ def main():
         global lock
         # if(lock == True):
         if(lock == False):
-            xmpx = xe-x0
-            xm = xmt/xmpx
-            ympx = ye-y0
-            ym = -ymp/ympx
+            xDelta = xe-x0
+            xm = xmLon/xDelta
+            yDelta = ye-y0
+            ym = -ymLat/yDelta
             # Perform coordinate transformation to normalize results
             lonWaypoint = (event.x-x0)*(xm)+xInitial
             latWaypoint = (event.y-y0)*(ym)+yInitial
