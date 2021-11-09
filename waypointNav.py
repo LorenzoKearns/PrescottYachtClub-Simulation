@@ -25,10 +25,38 @@ import cartopy.feature as cfeature
 import cartopy.io.img_tiles as cimgt
 from urllib.request import urlopen, Request
 from tkinter.filedialog import askopenfilename
-# from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 #****************************************************************#
 #
 #
+        # give a message to tell the order in which the boundaries of the naviagtion console will be constrained
+def image_spoof(self, tile): # this function pretends not to be a Python script
+    url = self._image_url(tile) # get the url of the street map API
+    req = Request(url) # start request
+    req.add_header('User-agent','Anaconda 3') # add user agent to request
+    fh = urlopen(req)
+    im_data = io.BytesIO(fh.read()) # get image
+    fh.close() # close url
+    img = Image.open(im_data) # open image with PIL
+    img = img.convert(self.desired_tile_form) # set image format
+    return img, self.tileextent(tile), 'lower' # reformat for cartopy
+
+def plotStuff():
+    cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
+    map = cimgt.OSM()
+    fig = plt.figure(figsize = (8, 6), dpi = 100)
+    ax1 = plt.axes(projection = map.crs)
+    lakeCenter = [34.52, -112.386]
+    zoomRatio = 0.005
+    extent = [lakeCenter[1]-(zoomRatio*0.6),lakeCenter[1]+(zoomRatio*0.8),lakeCenter[0]-(zoomRatio),lakeCenter[0]+(zoomRatio*0.6)] # adjust to zoom
+    ax1.set_extent(extent) # set extents
+    scale = np.ceil(-np.sqrt(2)*np.log(np.divide(zoomRatio,350.0))) # empirical solve for scale based on zoom
+    scale = (scale<20) and scale or 19 # scale cannot be larger than 19
+    ax1.add_image(map, int(scale)) # add OSM with zoom specification
+    x = [-112.388989, -112.-112.3857]
+    y = [34.5150517, 34.519631]
+    plt.plot(x, y, 'r--')
+    plt.show() # show the plot
 #**********************************************************************************************#
 # Define the main functionality of the program
 #**********************************************************************************************#
@@ -56,41 +84,6 @@ def main():
         # set the initial positions in lat and longitude at the origin
     xInitial = lonOrig
     yInitial = latOrig
-        # give a message to tell the order in which the boundaries of the naviagtion console will be constrained
-    tk.messagebox.showinfo("Set plot bounds", "Click Order: \n"
-                                                "1) Origin \n"
-                                                "2) Longitude end \n"
-                                                "3) Lattitude end")
-    def image_spoof(self, tile): # this function pretends not to be a Python script
-        url = self._image_url(tile) # get the url of the street map API
-        req = Request(url) # start request
-        req.add_header('User-agent','Anaconda 3') # add user agent to request
-        fh = urlopen(req)
-        im_data = io.BytesIO(fh.read()) # get image
-        fh.close() # close url
-        img = Image.open(im_data) # open image with PIL
-        img = img.convert(self.desired_tile_form) # set image format
-        return img, self.tileextent(tile), 'lower' # reformat for cartopy
-    def plotStuff():
-        cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
-        map = cimgt.OSM()
-        fig = plt.figure(figsize = (8, 6), dpi = 100)
-        ax1 = plt.axes(projection = map.crs)
-        lakeCenter = [34.52, -112.386]
-        zoomRatio = 0.005
-        extent = [lakeCenter[1]-(zoomRatio*0.6),lakeCenter[1]+(zoomRatio*0.8),lakeCenter[0]-(zoomRatio),lakeCenter[0]+(zoomRatio*0.6)] # adjust to zoom
-        ax1.set_extent(extent) # set extents
-        scale = np.ceil(-np.sqrt(2)*np.log(np.divide(zoomRatio,350.0))) # empirical solve for scale based on zoom
-        scale = (scale<20) and scale or 19 # scale cannot be larger than 19
-        ax1.add_image(map, int(scale)) # add OSM with zoom specification
-        x = [-112.388989, -112.-112.3857]
-        y = [34.5150517, 34.519631]
-        plt.plot(x, y, 'r--')
-        plt.show() # show the plot
-        plt.gcf().canvas.draw()
-        canvas = FigureCanvasTkAgg(fig, master=controlCenter)
-        canvas.get_tk_widget().grid(row=1,column=24)
-        canvas.draw()
 #********#
 # Ill be real, I Just totally gave up on proper function formatting since they are all in the damn loop.
 #  At some point I think I can put all this into an object using classes or something,
@@ -99,8 +92,8 @@ def main():
     # Determine the origin by clicking
     def getorigin(eventorigin):
         global x0,y0
-        x0 = eventorigin.x
-        y0 = eventorigin.y
+        x0 = 34
+        y0 = 609
         print(x0,y0)
         controlCenter.bind("<Button 1>",getextentx)
     # mouseclick event
@@ -108,16 +101,17 @@ def main():
     # Determine the extent of the figure in the x direction (Temperature)
     def getextentx(eventextentx):
         global xe
-        xe = eventextentx.x
+        xe = 453
         print(xe)
         controlCenter.bind("<Button 1>",getextenty)
     # Determine the extent of the figure in the y direction (Pressure)
     def getextenty(eventextenty):
         global ye
-        ye = eventextenty.y
+        ye = 33
         print(ye)
         tk.messagebox.showinfo("All good!", "The grid is all good. Start Navigating")
         controlCenter.bind("<Button 1>",printcoords)
+
     # print the coords to the console
     def printcoords(event):
         global lock
