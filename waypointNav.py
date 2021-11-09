@@ -7,6 +7,7 @@
 #   version: 1.0 10/26/2021 - Working map of lynx lake with accurate longitude and lattitude overlay
 #   version: 2.0 11/01/2021 - Reconfigure of the program without initial startup map, working navigation map which saves longitude
 #                  and lattitude of mouse click. Removed excess code features, renamed variables to be more intuitve, cleaned up code and added comments
+#   version: 3.0 11/08/2021 - Fixed GUI so you no longer have to set the boundaries
 #  Purpose: GUI for selecting waypoints and displaying desired data from boat sensors.
 #*******************************************************************************************************************#
 #
