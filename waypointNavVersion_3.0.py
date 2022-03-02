@@ -15,11 +15,9 @@
 #****************************************************************#
 # Includes:
 import io
-import csv
 import time
 import serial
 import numpy as np
-import pandas as pd
 import tkinter as tk
 from PIL import Image
 from tkinter import *
@@ -28,16 +26,14 @@ from PIL import Image, ImageTk
 import matplotlib.pyplot as plt
 import cartopy.feature as cfeature
 import cartopy.io.img_tiles as cimgt
-from descartes import PolygonPatch
 from urllib.request import urlopen, Request
 from matplotlib.transforms import offset_copy
 from tkinter.filedialog import askopenfilename
-from shapely.geometry import Point, LineString, Polygon
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 #****************************************************************#
 #
 #
-arduino = serial.Serial(port='COM10', baudrate=115200, timeout=.1)
+# arduino = serial.Serial(port='COM10', baudrate=115200, timeout=.1)
 #***************************************************#
 # Beginning of functions living outside the GUI loop
 #****************************************************************#
@@ -62,8 +58,8 @@ def image_spoof(self, tile): # this function pretends not to be a Python script
 #****************************************************************#
 def plotStuff():
      # Create a Stamen Terrain instance.
-    global desired_waypoint
-    global boat_origin
+    global plot_array_x
+    global plot_array_y
     stamen_terrain = cimgt.OSM()
     # Create a GeoAxes in the tile's projection.
     ax = plt.axes(projection=stamen_terrain.crs)
@@ -72,28 +68,34 @@ def plotStuff():
     # Limit the extent of the map to a small longitude/latitude range.
     ax.set_extent([-112.388989, -112.382, 34.5150517, 34.5230208])
     # ax.set_extent([-55, -45, 40, 50])
+    # Add the Stamen data at zoom level 8.
     scale = np.ceil(-np.sqrt(2)*np.log(np.divide(zoomRatio,350.0))) # empirical solve for scale based on zoom
     scale = (scale<20) and scale or 19 # scale cannot be larger than 19
     ax.add_image(stamen_terrain, int(scale))
     # plot the line the boat would ideally take
     plt.title("Waypoint tracked path")
-    plt.plot(desired_waypoint.lon, desired_waypoint.lat, marker='x', color='red', markersize=7,
+    plt.plot(plot_array_x,plot_array_y, 'r-', marker='o', color='black', markersize=1, transform=ccrs.Geodetic())
+    plt.plot(plot_array_x[4], plot_array_y[4], marker='x', color='red', markersize=7,
                  alpha=0.7, transform=ccrs.Geodetic())
     geodetic_transform = ccrs.Geodetic()._as_mpl_transform(ax)
     text_transform = offset_copy(geodetic_transform, units='dots', x=-25)
-    plt.text(desired_waypoint.lon, desired_waypoint.lat, u'Target Waypoint',
+    plt.text(plot_array_x[4], plot_array_y[4], u'Major Waypoint',
                  verticalalignment='top', horizontalalignment='left',
                  transform=text_transform,
                  bbox=dict(facecolor='sandybrown', alpha=0.5, boxstyle='round'))
+    # show waypoints
+    for i in range(4):
+        plt.plot(plot_array_x[i], plot_array_y[i], marker='x', color='red', markersize=4,
+        alpha=0.7, transform=ccrs.Geodetic())
+        geodetic_transform = ccrs.Geodetic()._as_mpl_transform(ax)
+        text_transform = offset_copy(geodetic_transform, units='dots', x=-25)
 
-    plt.plot(boat_origin.lon, boat_origin.lat, marker='x', color='red', markersize=7,
-                 alpha=0.7, transform=ccrs.Geodetic())
-    geodetic_transform = ccrs.Geodetic()._as_mpl_transform(ax)
-    text_transform = offset_copy(geodetic_transform, units='dots', x=-25)
-    plt.text(boat_origin.lon, boat_origin.lat, u'Boat starting position',
-                 verticalalignment='top', horizontalalignment='left',
-                 transform=text_transform,
-                 bbox=dict(facecolor='sandybrown', alpha=0.5, boxstyle='round'))
+        # Add text 25 pixels to the left of the volcano.
+        plt.text(plot_array_x[i], plot_array_y[i], u'Waypoint %d'%(waypoint_num),
+        verticalalignment='center', horizontalalignment='right',
+        transform=text_transform,
+        bbox=dict(facecolor='sandybrown', alpha=0.5, boxstyle='round'))
+        waypoint_num += 1
     plt.show()
     plt.gcf().canvas.draw()
     fig = plt.figure()
@@ -105,78 +107,19 @@ def plotStuff():
 #
 #
 #
-#****************************************************************#
-# Function to create a plot showing user selected waypoints
-#****************************************************************#
-def plotBoundaries():
-    global poly
-    global boundaryArrayLat
-    global boundaryArrayLon
-    global boat_poly
-     # Create a Stamen Terrain instance.
-    stamen_terrain = cimgt.OSM()
-    # Create a GeoAxes in the tile's projection.
-    ax = plt.axes(projection=stamen_terrain.crs)
-    zoomRatio = 0.005
-    waypoint_num = 1
-    # Limit the extent of the map to a small longitude/latitude range.
-    ax.set_extent([-112.388989, -112.382, 34.5150517, 34.5230208])
-    # ax.set_extent([-55, -45, 40, 50])
-    scale = np.ceil(-np.sqrt(2)*np.log(np.divide(zoomRatio,350.0))) # empirical solve for scale based on zoom
-    scale = (scale<20) and scale or 19 # scale cannot be larger than 19
-    ax.add_image(stamen_terrain, int(scale))
-    # plot the line the boat would ideally take
-    plt.title("Boundaries")
-    # plt.plot(boundaryArrayLon, boundaryArrayLat, color='#A2142F', markersize=4,
-    # alpha=0.7, transform=ccrs.Geodetic())
-    plt.plot(*poly.exterior.xy,transform=ccrs.Geodetic())
-    plt.plot(*boat_poly.exterior.xy,transform=ccrs.Geodetic())
-    plt.show()
-    plt.gcf().canvas.draw()
-    fig = plt.figure()
-    canvas = FigureCanvasTkAgg(fig, master=window)
-    canvas.get_tk_widget().grid(row=1,column=24)
-    canvas.draw()
-# End of plotBoundaries
-#****************************************************************#
-
-def create_bound_box():
-    global boundaryArrayLat, boundaryArrayLon
-
-
-class LatLon():
-    def __init__(self, lattitude, longitude):
-        self.lat = lattitude
-        self.lon = longitude
-
-class GCMode():
-    def __init__(self):
-        self.listen = 0
-        self.origin_to_gc = 1
-        self.transmit = 2
-        self.receive_waypoint = 3
-        self.telem_to_gc = 4
 #**********************************************************************************************#
 # Define the main functionality of the program
 #**********************************************************************************************#
 def main():
     global lock
-    global boat_origin
-    global desired_waypoint
+    global plot_array_x
+    global plot_array_y
     global setWay
     global cnt
-    global gc_modes
-    global boundOn
-    global boundaryArrayLon
-    global boundaryArrayLat
-    gc_modes = GCMode()
-    boat_origin = LatLon(34.515647653125,-112.38510863245823)
-    desired_waypoint = LatLon(0.00,0.00)
     cnt = 0
-    boundOn = False
-    boundaryArrayLon = []
-    boundaryArrayLat = []
     setWay = False
+    plot_array_x = np.zeros(5)
+    plot_array_y = np.zeros(5)
     lock = True
     lonOrig = -112.388989 # set the longitidue at the origin
     latOrig = 34.5150517 # set the lattitude at the origin
@@ -214,142 +157,96 @@ def main():
         controlCenter.bind("<Button 1>",getextentx)
     # mouseclick event
     controlCenter.bind("<Button 1>",getorigin)
-
     # Determine the extent of the figure in the x direction (Longitude)
     def getextentx(eventextentx):
         global xe
         xe = 453
         print(xe)
         controlCenter.bind("<Button 1>",getextenty)
-
     # Determine the extent of the figure in the y direction (Lattitude)
     def getextenty(eventextenty):
         global ye
         ye = 33
         print(ye)
         tk.messagebox.showinfo("All good!", "The grid is all good. Start Navigating")
-        controlCenter.bind("<Button 1>",select_way)
+        controlCenter.bind("<Button 1>",printcoords)
 
     # print the coords to the console
-    def select_way(event):
+    def printcoords(event):
         global lock
-        global boat_origin
-        global desired_waypoint
+        global plot_array_x
+        global plot_array_y
         global setWay
-        global boundaryArrayLon
-        global boundaryArrayLat
-        xDelta = xe-x0
-        xm = xmLon/xDelta
-        yDelta = ye-y0
-        ym = -ymLat/yDelta
-        # Perform coordinate transformation to normalize results
-        lonWaypoint = (event.x-x0)*(xm)+xInitial
-        latWaypoint = (event.y-y0)*(ym)+yInitial
+        global cnt
         if(setWay == True):
-            desired_waypoint.lat = latWaypoint
-            desired_waypoint.lon = lonWaypoint
-            print(desired_waypoint.lat)
-            print(desired_waypoint.lon)
-            setWay = False
-            tk.Label(controlCenter, text = "                                                                                                ").place(x = 30, y = 640)
-            tk.Label(controlCenter, text = " The waypoint was placed at: Lattitude: "+str(desired_waypoint.lat)+", Longitude: "+str(desired_waypoint.lon)).place(x = 30, y = 640)
-            tk.Label(controlCenter, text = "                                                                             ").place(x = 30, y = 620)
-        if (boundOn == True):
-            boundaryArrayLon.append(lonWaypoint)
-            boundaryArrayLat.append(latWaypoint)
+            cnt += 1
+            if ((cnt-1) < 5):
+                    xDelta = xe-x0
+                    xm = xmLon/xDelta
+                    yDelta = ye-y0
+                    ym = -ymLat/yDelta
+                    # Perform coordinate transformation to normalize results
+                    lonWaypoint = (event.x-x0)*(xm)+xInitial
+                    latWaypoint = (event.y-y0)*(ym)+yInitial
+                    plot_array_y[cnt-1] = latWaypoint
+                    plot_array_x[cnt-1] = lonWaypoint
+                    longitude = tk.Label(controlCenter, text = "Waypoint " + str(cnt) + " stored ").place(x = 500, y = 310)
+                    if(cnt == 5):
+                        longitude = tk.Label(controlCenter, text = "Waypoint setting complete, click one more time to finalize").place(x = 500, y = 310)
+            else:
+                cnt = 0
+                setWay = False
+                longitude = tk.Label(controlCenter, text = "Waypoint 1 at  Lon: " + str(plot_array_x[0]) + ", Lat: " + str(plot_array_y[0]) + "              ").place(x = 500, y = 310)
+                longitude = tk.Label(controlCenter, text = "Waypoint 2 at  Lon: " + str(plot_array_x[1]) + ", Lat: " + str(plot_array_y[1]) + "              ").place(x = 500, y = 330)
+                longitude = tk.Label(controlCenter, text = "Waypoint 3 at  Lon: " + str(plot_array_x[2]) + ", Lat: " + str(plot_array_y[2]) + "              ").place(x = 500, y = 350)
+                longitude = tk.Label(controlCenter, text = "Waypoint 4 at  Lon: " + str(plot_array_x[3]) + ", Lat: " + str(plot_array_y[3]) + "              ").place(x = 500, y = 370)
+                longitude = tk.Label(controlCenter, text = "Waypoint 5 at  Lon: " + str(plot_array_x[4]) + ", Lat: " + str(plot_array_y[4]) + "              ").place(x = 500, y = 390)
+            print (plot_array_x, plot_array_y)
+        else:
+            if(lock == False):
+                xDelta = xe-x0
+                xm = xmLon/xDelta
+                yDelta = ye-y0
+                ym = -ymLat/yDelta
+                # Perform coordinate transformation to normalize results
+                lonWaypoint = (event.x-x0)*(xm)+xInitial
+                latWaypoint = (event.y-y0)*(ym)+yInitial
+                #outputting Longitude and Latitude coords to console
+                print (lonWaypoint,latWaypoint)
+                longitude = tk.Label(controlCenter, text = "Selected Longitude: "+ str(lonWaypoint)+ "              ").place(x = 30, y = 610)
+                lattitude = tk.Label(controlCenter, text = "Selected Lattitude: "+ str(latWaypoint) + "             ").place(x = 30, y = 630)
+                lock = True # sets lock after one waypoint selection, to select a new waypoint a fresh click of place waypoint must be done
 
-    def set_origin_and_waypoint():
+    def grab_five_waypoints():
         global setWay
         if (setWay == False):
             setWay = True
-            tk.Label(controlCenter, text = "Place the desired waypoint of the boat: ").place(x = 30, y = 620)
         elif (setWay == True):
             setWay = False
 
-    def latlon_to_serial():
-        global desired_waypoint
+    def cycleLock():
+        global lock
+        if (lock == False):
+            lock = True
+        elif (lock == True):
+            lock = False
+        # make a little button boi, he says "Place waypoint" and when clicked allows you to..... Place a waypoint
+
+    def write_gps_to_serial():
         arduino.flush()
-        arduino.write(bytes(str(desired_waypoint.lat), 'utf-8'))
-        arduino.write(bytes(str(desired_waypoint.lon), 'utf-8'))
+        arduino.write(bytes(x, 'utf-8'))
         time.sleep(0.05)
 
-    def get_boat_origin():
-        global boat_origin
-        global gc_modes
-        arduino.write(bytes(str(gc_modes.origin_to_gc), 'utf-8'))
-        time.sleep(0.05)
-        boat_origin.lat = arduino.readline().decode('utf-8').rstrip()
-        boat_origin.lon = arduino.readline().decode('utf-8').rstrip()
-        arduino.write(bytes(str(curr_comm_mode), 'utf-8'))
-
-    def define_boundaries():
-        global boundOn
-        boundOn = True
-        tk.Label(controlCenter, text = "Begin mapping boundaries: ").place(x = 30, y = 610)
-
-    def stopBoundaries():
-        global boundOn
-        boundOn = False
-        tk.Label(controlCenter, text = "                                                  ").place(x = 30, y = 610)
-
-    def write_to_file():
-        global boundaryArrayLon
-        global boundaryArrayLat
-        boundaryArrayLon = np.array(boundaryArrayLon)
-        boundaryArrayLat = np.array(boundaryArrayLat)
-        n = boundaryArrayLat.size
-        if(n != boundaryArrayLon.size):
-            print("!!!There is an ERROR, not equal values for lat and lon!!!")
-        # result_file = open('outputBoundaries.csv', 'a')
-        lat_lon_array = pd.DataFrame(
-            {'Lattitude': boundaryArrayLat,
-             'Longitude': boundaryArrayLon
-            })
-        lat_lon_array.to_csv('newOutputBoundaries2.csv')
-
-    def read_boundaries_from_csv():
-        global boundaryArrayLat
-        global boundaryArrayLon
-        global coordTuple
-        temp_container = pd.read_csv('newOutputBoundaries.csv')
-        temp_container = np.array(temp_container)
-        boundaryArrayLat = temp_container[:,1]
-        boundaryArrayLon = temp_container[:,2]
-        boundaryArrayLon = np.array(boundaryArrayLon)
-        boundaryArrayLat = np.array(boundaryArrayLat)
-        coordTuple = np.array((boundaryArrayLon,boundaryArrayLat)).T
-        print(coordTuple)
-        create_polygon()
-
-    def create_polygon():
-        global coordTuple
-        global poly
-        global boat_poly
-        world_exterior = [(-112.388989, 34.5230208), (-112.388989, 34.5150517), (-112.382, 34.5150517), (-112.382, 34.5230208)]
-        poly = Polygon(coordTuple)
-        # poly_extr = poly.exterior
-        boat_dimensions = [(-112.3849, 34.515117), (-112.3849, 34.5151), (-112.384795, 34.51511), (-112.384805, 34.5151)]
-        boat_poly = Polygon(boat_dimensions)
-        boat_dimensions = [(-112.3849, 34.515117), (-112.3849, 34.5151), (-112.384795, 34.51511), (-112.384805, 34.5151)]
-        boat_poly = Polygon(boat_dimensions)
-        # print(poly_extr)
-        min_rec_dist = 0.000066
-        # print(boat_poly.exterior.distance(poly.exterior))
-        safety_threshold = boat_poly.exterior.distance(poly.exterior) - min_rec_dist
-        if(safety_threshold > 0):
-            print("The boat is safe and not too close to the shore")
-        else:
-            print("Danger the boat is at risk of collision")
-
+    def send_serial():
+        write_read(str(plot_array_x[i]))
+        data = arduino.readline().decode('utf-8').rstrip()
+        print(data) # printing the value
+        # print(float(value))
+    tk.Button(controlCenter, text='Get Lon/Lat', command = cycleLock).place(x = 460, y = 30)
     tk.Button(controlCenter, text='Show real Plot', command = plotStuff). place(x = 460, y = 60)
-    tk.Button(controlCenter, text='Set Boat Waypoint', command = set_origin_and_waypoint).place(x = 460, y = 30)
-    tk.Button(controlCenter, text='Send Waypoint to comms board', command = latlon_to_serial).place(x = 460, y = 90)
-    tk.Button(controlCenter, text='Get the origin coords of the boat', command = get_boat_origin).place(x = 460, y = 120)
-    tk.Button(controlCenter, text='Define boundaries', command = define_boundaries).place(x = 460, y = 150)
-    tk.Button(controlCenter, text='Stop defining boundaries', command = stopBoundaries).place(x = 460, y = 180)
-    tk.Button(controlCenter, text='Write boundaries to CSV', command = write_to_file).place(x = 460, y = 210)
-    tk.Button(controlCenter, text='Read csv for boundaries', command = read_boundaries_from_csv). place(x = 460, y = 240)
-    tk.Button(controlCenter, text='Show boundary Plot', command = plotBoundaries). place(x = 460, y = 270)
+    tk.Button(controlCenter, text='Set Boat Waypoint', command = grab_five_waypoints).place(x = 460, y = 90)
+    tk.Button(controlCenter, text='Send Serial', command = write_gps_to_serial).place(x = 460, y = 120)
+
 
         # loop until the code inevitably crashes again because tkinter is ass
     root.mainloop()
