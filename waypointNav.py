@@ -8,6 +8,7 @@
 #   version: 2.0 11/01/2021 - Reconfigure of the program without initial startup map, working navigation map which saves longitude
 #                  and lattitude of mouse click. Removed excess code features, renamed variables to be more intuitve, cleaned up code and added comments
 #   version: 3.0 11/08/2021 - Fixed GUI so you no longer have to set the boundaries
+#   version: 4.0 03/07/2022 - Implemented plotting over image, Created polygon structure to form boundaries for boat
 #  Purpose: GUI for selecting waypoints and displaying desired data from boat sensors.
 #*******************************************************************************************************************#
 #
@@ -24,11 +25,14 @@ import tkinter as tk
 from PIL import Image
 from tkinter import *
 import cartopy.crs as ccrs
+from polarChart import Sailing
 from PIL import Image, ImageTk
 import matplotlib.pyplot as plt
+from polarChart import Polar
+from descartes import PolygonPatch
 import cartopy.feature as cfeature
 import cartopy.io.img_tiles as cimgt
-from descartes import PolygonPatch
+import hrosailing.polardiagram as pol
 from urllib.request import urlopen, Request
 from matplotlib.transforms import offset_copy
 from tkinter.filedialog import askopenfilename
@@ -36,14 +40,10 @@ from shapely.geometry import Point, LineString, Polygon
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 #****************************************************************#
 #
-#
-arduino = serial.Serial(port='COM10', baudrate=115200, timeout=.1)
-#***************************************************#
+# arduino = serial.Serial(port='COM8', baudrate=115200, timeout=.1)
+
 # Beginning of functions living outside the GUI loop
-#****************************************************************#
-# Function to create the interactive image for the GUI
-#****************************************************************#
-def image_spoof(self, tile): # this function pretends not to be a Python script
+def image_spoof(self, tile): # Function to create the interactive image for the GUI
     url = self._image_url(tile) # get the url of the street map API
     req = Request(url) # start request
     req.add_header('User-agent','Anaconda 3') # add user agent to request
@@ -53,14 +53,8 @@ def image_spoof(self, tile): # this function pretends not to be a Python script
     img = Image.open(im_data) # open image with PIL
     img = img.convert(self.desired_tile_form) # set image format
     return img, self.tileextent(tile), 'lower' # reformat for cartopy
-# End of image_spoof
-#****************************************************************#
-#
-#
-#****************************************************************#
-# Function to create a plot showing user selected waypoints
-#****************************************************************#
-def plotStuff():
+
+def plotStuff():    # Function to create a plot showing user selected waypoints
      # Create a Stamen Terrain instance.
     global desired_waypoint
     global boat_origin
@@ -100,19 +94,13 @@ def plotStuff():
     canvas = FigureCanvasTkAgg(fig, master=window)
     canvas.get_tk_widget().grid(row=1,column=24)
     canvas.draw()
-# End of plotStuff
-#****************************************************************#
-#
-#
-#
-#****************************************************************#
-# Function to create a plot showing user selected waypoints
-#****************************************************************#
-def plotBoundaries():
+
+def plotBoundaries():   # Function to create a plot showing the boundaries of the lake
     global poly
     global boundaryArrayLat
     global boundaryArrayLon
     global boat_poly
+    global boat_poly2
      # Create a Stamen Terrain instance.
     stamen_terrain = cimgt.OSM()
     # Create a GeoAxes in the tile's projection.
@@ -131,18 +119,13 @@ def plotBoundaries():
     # alpha=0.7, transform=ccrs.Geodetic())
     plt.plot(*poly.exterior.xy,transform=ccrs.Geodetic())
     plt.plot(*boat_poly.exterior.xy,transform=ccrs.Geodetic())
+    plt.plot(*boat_poly2.exterior.xy,transform=ccrs.Geodetic())
     plt.show()
     plt.gcf().canvas.draw()
     fig = plt.figure()
     canvas = FigureCanvasTkAgg(fig, master=window)
     canvas.get_tk_widget().grid(row=1,column=24)
     canvas.draw()
-# End of plotBoundaries
-#****************************************************************#
-
-def create_bound_box():
-    global boundaryArrayLat, boundaryArrayLon
-
 
 class LatLon():
     def __init__(self, lattitude, longitude):
@@ -156,6 +139,7 @@ class GCMode():
         self.transmit = 2
         self.receive_waypoint = 3
         self.telem_to_gc = 4
+
 #**********************************************************************************************#
 # Define the main functionality of the program
 #**********************************************************************************************#
@@ -169,6 +153,12 @@ def main():
     global boundOn
     global boundaryArrayLon
     global boundaryArrayLat
+    global sailor
+    global angle
+    global speed
+    global p_chart
+    angle = 30
+    speed = 10
     gc_modes = GCMode()
     boat_origin = LatLon(34.515647653125,-112.38510863245823)
     desired_waypoint = LatLon(0.00,0.00)
@@ -199,13 +189,13 @@ def main():
         # set the initial positions in lat and longitude at the origin
     xInitial = lonOrig
     yInitial = latOrig
-#********#
-# Ill be real, I Just totally gave up on proper function formatting since they are all in the damn loop.
-#  At some point I think I can put all this into an object using classes or something,
-#   for now avert your eyes future me and pretend there are now functions here
-#
-    # Determine the origin
-    def getorigin(eventorigin):
+
+    # Ill be real, I Just totally gave up on proper function formatting since they are all in the damn loop.
+    #  At some point I think I can put all this into an object using classes or something,
+    #   for now avert your eyes future me and pretend there are now functions here
+    #
+
+    def getorigin(eventorigin): # Determine the origin
         tk.messagebox.showinfo("Startup","Not setup yet, spam click till you see the all good message")
         global x0,y0
         x0 = 34
@@ -276,11 +266,11 @@ def main():
     def get_boat_origin():
         global boat_origin
         global gc_modes
-        arduino.write(bytes(str(gc_modes.origin_to_gc), 'utf-8'))
+        # arduino.write(bytes(str(gc_modes.origin_to_gc), 'utf-8'))
         time.sleep(0.05)
         boat_origin.lat = arduino.readline().decode('utf-8').rstrip()
         boat_origin.lon = arduino.readline().decode('utf-8').rstrip()
-        arduino.write(bytes(str(curr_comm_mode), 'utf-8'))
+        # arduino.write(bytes(str(curr_comm_mode), 'utf-8'))
 
     def define_boundaries():
         global boundOn
@@ -325,13 +315,14 @@ def main():
         global coordTuple
         global poly
         global boat_poly
+        global boat_poly2
         world_exterior = [(-112.388989, 34.5230208), (-112.388989, 34.5150517), (-112.382, 34.5150517), (-112.382, 34.5230208)]
         poly = Polygon(coordTuple)
         # poly_extr = poly.exterior
-        boat_dimensions = [(-112.3849, 34.515117), (-112.3849, 34.5151), (-112.384795, 34.51511), (-112.384805, 34.5151)]
+        boat_dimensions = [(-112.3849, 34.515105), (-112.3849, 34.5151), (-112.384799, 34.51508), (-112.384802, 34.51508)]
         boat_poly = Polygon(boat_dimensions)
-        boat_dimensions = [(-112.3849, 34.515117), (-112.3849, 34.5151), (-112.384795, 34.51511), (-112.384805, 34.5151)]
-        boat_poly = Polygon(boat_dimensions)
+        boat_dimensions2 = [(-112.3849, 34.51611), (-112.3849, 34.5161), (-112.384799, 34.5161), (-112.384802, 34.5161)]
+        boat_poly2 = Polygon(boat_dimensions2)
         # print(poly_extr)
         min_rec_dist = 0.000066
         # print(boat_poly.exterior.distance(poly.exterior))
@@ -340,6 +331,26 @@ def main():
             print("The boat is safe and not too close to the shore")
         else:
             print("Danger the boat is at risk of collision")
+
+    def initialize_polar_chart():
+        global sailor
+        global boat
+        global p_chart
+        boat = Polar()
+        p_chart = boat.plot_polar()
+        print("test")
+
+
+    def get_heading():
+        global p_chart
+        global speed
+        global angle
+        sailor = Sailing(p_chart)
+        h_angle, p_time, second_h_angle = sailor.get_optimal_direction(speed, angle)
+        tk.Label(controlCenter, text = "The wind is blowing at " + str(angle) + " degrees, at a speed of " + str(speed) + " knots").place(x = 460, y = 570)
+        tk.Label(controlCenter, text = "Optimal boat direction for current wind speed is: "+ str(h_angle)+ " degrees to the wind, maintain this for "+ str(int(p_time))+"% of the time").place(x = 460, y = 600)
+        if (second_h_angle > 0):
+            tk.Label(controlCenter, text = "The second tack angle is: "+ str(second_h_angle) + "degrees, for "+ str(int(100 - p_time)) + "% of the time").place(x = 460, y = 630)
 
     tk.Button(controlCenter, text='Show real Plot', command = plotStuff). place(x = 460, y = 60)
     tk.Button(controlCenter, text='Set Boat Waypoint', command = set_origin_and_waypoint).place(x = 460, y = 30)
@@ -350,6 +361,8 @@ def main():
     tk.Button(controlCenter, text='Write boundaries to CSV', command = write_to_file).place(x = 460, y = 210)
     tk.Button(controlCenter, text='Read csv for boundaries', command = read_boundaries_from_csv). place(x = 460, y = 240)
     tk.Button(controlCenter, text='Show boundary Plot', command = plotBoundaries). place(x = 460, y = 270)
+    tk.Button(controlCenter, text='Initialize the Polar chart', command = initialize_polar_chart). place(x = 460, y = 300)
+    tk.Button(controlCenter, text='Get the heading', command = get_heading). place(x = 460, y = 330)
 
         # loop until the code inevitably crashes again because tkinter is ass
     root.mainloop()
