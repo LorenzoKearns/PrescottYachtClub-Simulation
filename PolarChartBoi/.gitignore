@@ -1,7 +1,0 @@
-ORC_VPP_2019.pdf
-sphinx/_build/
-src/__pycache__/
-dev.py
-venv
-.vscode
-*.pyc

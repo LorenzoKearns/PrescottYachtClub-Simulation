@@ -42,6 +42,19 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 #
 # arduino = serial.Serial(port='COM8', baudrate=115200, timeout=.1)
 
+class LatLon():
+    def __init__(self, lattitude, longitude):
+        self.lat = lattitude
+        self.lon = longitude
+
+class GCMode():
+    def __init__(self):
+        self.listen = 0
+        self.origin_to_gc = 1
+        self.transmit = 2
+        self.receive_waypoint = 3
+        self.telem_to_gc = 4
+
 # Beginning of functions living outside the GUI loop
 def image_spoof(self, tile): # Function to create the interactive image for the GUI
     url = self._image_url(tile) # get the url of the street map API
@@ -127,19 +140,6 @@ def plotBoundaries():   # Function to create a plot showing the boundaries of th
     canvas.get_tk_widget().grid(row=1,column=24)
     canvas.draw()
 
-class LatLon():
-    def __init__(self, lattitude, longitude):
-        self.lat = lattitude
-        self.lon = longitude
-
-class GCMode():
-    def __init__(self):
-        self.listen = 0
-        self.origin_to_gc = 1
-        self.transmit = 2
-        self.receive_waypoint = 3
-        self.telem_to_gc = 4
-
 #**********************************************************************************************#
 # Define the main functionality of the program
 #**********************************************************************************************#
@@ -189,7 +189,6 @@ def main():
         # set the initial positions in lat and longitude at the origin
     xInitial = lonOrig
     yInitial = latOrig
-
     # Ill be real, I Just totally gave up on proper function formatting since they are all in the damn loop.
     #  At some point I think I can put all this into an object using classes or something,
     #   for now avert your eyes future me and pretend there are now functions here
@@ -200,7 +199,6 @@ def main():
         global x0,y0
         x0 = 34
         y0 = 609
-        print(x0,y0)
         controlCenter.bind("<Button 1>",getextentx)
     # mouseclick event
     controlCenter.bind("<Button 1>",getorigin)
@@ -209,14 +207,12 @@ def main():
     def getextentx(eventextentx):
         global xe
         xe = 453
-        print(xe)
         controlCenter.bind("<Button 1>",getextenty)
 
     # Determine the extent of the figure in the y direction (Lattitude)
     def getextenty(eventextenty):
         global ye
         ye = 33
-        print(ye)
         tk.messagebox.showinfo("All good!", "The grid is all good. Start Navigating")
         controlCenter.bind("<Button 1>",select_way)
 
