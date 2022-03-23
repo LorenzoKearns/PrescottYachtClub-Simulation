@@ -114,6 +114,8 @@ def plotBoundaries():   # Function to create a plot showing the boundaries of th
     global boundaryArrayLon
     global boat_poly
     global boat_poly2
+    global rock1_poly
+    global rock2_poly
      # Create a Stamen Terrain instance.
     stamen_terrain = cimgt.OSM()
     # Create a GeoAxes in the tile's projection.
@@ -131,8 +133,10 @@ def plotBoundaries():   # Function to create a plot showing the boundaries of th
     # plt.plot(boundaryArrayLon, boundaryArrayLat, color='#A2142F', markersize=4,
     # alpha=0.7, transform=ccrs.Geodetic())
     plt.plot(*poly.exterior.xy,transform=ccrs.Geodetic())
-    plt.plot(*boat_poly.exterior.xy,transform=ccrs.Geodetic())
+    # plt.plot(*boat_poly.exterior.xy,transform=ccrs.Geodetic())
     plt.plot(*boat_poly2.exterior.xy,transform=ccrs.Geodetic())
+    # plt.plot(*rock1_poly.exterior.xy,transform=ccrs.Geodetic())
+    plt.plot(*rock2_poly.exterior.xy,transform=ccrs.Geodetic())
     plt.show()
     plt.gcf().canvas.draw()
     fig = plt.figure()
@@ -291,20 +295,20 @@ def main():
             {'Lattitude': boundaryArrayLat,
              'Longitude': boundaryArrayLon
             })
-        lat_lon_array.to_csv('newOutputBoundaries2.csv')
+        lat_lon_array.to_csv('newOutputBoundaries.csv')
 
     def read_boundaries_from_csv():
         global boundaryArrayLat
         global boundaryArrayLon
         global coordTuple
-        temp_container = pd.read_csv('newOutputBoundaries.csv')
+        temp_container = pd.read_csv('newOutputBoundaries2.csv')
         temp_container = np.array(temp_container)
         boundaryArrayLat = temp_container[:,1]
         boundaryArrayLon = temp_container[:,2]
         boundaryArrayLon = np.array(boundaryArrayLon)
         boundaryArrayLat = np.array(boundaryArrayLat)
         coordTuple = np.array((boundaryArrayLon,boundaryArrayLat)).T
-        print(coordTuple)
+        # print(coordTuple)
         create_polygon()
 
     def create_polygon():
@@ -312,6 +316,8 @@ def main():
         global poly
         global boat_poly
         global boat_poly2
+        global rock1_poly
+        global rock2_poly
         world_exterior = [(-112.388989, 34.5230208), (-112.388989, 34.5150517), (-112.382, 34.5150517), (-112.382, 34.5230208)]
         poly = Polygon(coordTuple)
         # poly_extr = poly.exterior
@@ -319,6 +325,10 @@ def main():
         boat_poly = Polygon(boat_dimensions)
         boat_dimensions2 = [(-112.3849, 34.51611), (-112.3849, 34.5161), (-112.384799, 34.5161), (-112.384802, 34.5161)]
         boat_poly2 = Polygon(boat_dimensions2)
+        rock1_dimensions = [(-112.38556, 34.5192), (-112.3854, 34.52), (-112.3849, 34.5196)]
+        rock1_poly = Polygon(rock1_dimensions)
+        rock2_dimensions = [(-112.385678, 34.515530), (-112.385311, 34.516755),(-112.385311, 34.516755)]
+        rock2_poly = Polygon(rock2_dimensions)
         # print(poly_extr)
         min_rec_dist = 0.000066
         # print(boat_poly.exterior.distance(poly.exterior))
@@ -343,10 +353,19 @@ def main():
         global angle
         sailor = Sailing(p_chart)
         h_angle, p_time, second_h_angle = sailor.get_optimal_direction(speed, angle)
-        tk.Label(controlCenter, text = "The wind is blowing at " + str(angle) + " degrees, at a speed of " + str(speed) + " knots").place(x = 460, y = 570)
-        tk.Label(controlCenter, text = "Optimal boat direction for current wind speed is: "+ str(h_angle)+ " degrees to the wind, maintain this for "+ str(int(p_time))+"% of the time").place(x = 460, y = 600)
+        tk.Label(controlCenter, text = "If the wind is blowing at " + str(angle) + " degrees, at a speed of " + str(speed) + " knots").place(x = 460, y = 570)
+        tk.Label(controlCenter, text = "Optimal boat direction for current wind speed is: "+ str(h_angle)+ " degrees to the wind, maintained for "+ str(int(p_time))+"% of the time").place(x = 460, y = 600)
         if (second_h_angle > 0):
-            tk.Label(controlCenter, text = "The second tack angle is: "+ str(second_h_angle) + "degrees, for "+ str(int(100 - p_time)) + "% of the time").place(x = 460, y = 630)
+            tk.Label(controlCenter, text = "The second angle for the boat to tack to, is: "+ str(second_h_angle) + "degrees, for "+ str(int(100 - p_time)) + "% of the time").place(x = 460, y = 630)
+
+    def create_circle(x, y, r, canvasName): #center coordinates, radius
+        x0 = x - r
+        y0 = y - r
+        x1 = x + r
+        y1 = y + r
+        return canvasName.create_oval(x0, y0, x1, y1)
+
+    create_circle(1000, 200, 120, controlCenter)
 
     tk.Button(controlCenter, text='Show real Plot', command = plotStuff). place(x = 460, y = 60)
     tk.Button(controlCenter, text='Set Boat Waypoint', command = set_origin_and_waypoint).place(x = 460, y = 30)
