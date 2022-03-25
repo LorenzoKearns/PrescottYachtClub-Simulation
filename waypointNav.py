@@ -67,47 +67,6 @@ def image_spoof(self, tile): # Function to create the interactive image for the 
     img = img.convert(self.desired_tile_form) # set image format
     return img, self.tileextent(tile), 'lower' # reformat for cartopy
 
-def plotStuff():    # Function to create a plot showing user selected waypoints
-     # Create a Stamen Terrain instance.
-    global desired_waypoint
-    global boat_origin
-    stamen_terrain = cimgt.OSM()
-    # Create a GeoAxes in the tile's projection.
-    ax = plt.axes(projection=stamen_terrain.crs)
-    zoomRatio = 0.005
-    waypoint_num = 1
-    # Limit the extent of the map to a small longitude/latitude range.
-    ax.set_extent([-112.388989, -112.382, 34.5150517, 34.5230208])
-    # ax.set_extent([-55, -45, 40, 50])
-    scale = np.ceil(-np.sqrt(2)*np.log(np.divide(zoomRatio,350.0))) # empirical solve for scale based on zoom
-    scale = (scale<20) and scale or 19 # scale cannot be larger than 19
-    ax.add_image(stamen_terrain, int(scale))
-    # plot the line the boat would ideally take
-    plt.title("Waypoint tracked path")
-    plt.plot(desired_waypoint.lon, desired_waypoint.lat, marker='x', color='red', markersize=7,
-                 alpha=0.7, transform=ccrs.Geodetic())
-    geodetic_transform = ccrs.Geodetic()._as_mpl_transform(ax)
-    text_transform = offset_copy(geodetic_transform, units='dots', x=-25)
-    plt.text(desired_waypoint.lon, desired_waypoint.lat, u'Target Waypoint',
-                 verticalalignment='top', horizontalalignment='left',
-                 transform=text_transform,
-                 bbox=dict(facecolor='sandybrown', alpha=0.5, boxstyle='round'))
-
-    plt.plot(boat_origin.lon, boat_origin.lat, marker='x', color='red', markersize=7,
-                 alpha=0.7, transform=ccrs.Geodetic())
-    geodetic_transform = ccrs.Geodetic()._as_mpl_transform(ax)
-    text_transform = offset_copy(geodetic_transform, units='dots', x=-25)
-    plt.text(boat_origin.lon, boat_origin.lat, u'Boat starting position',
-                 verticalalignment='top', horizontalalignment='left',
-                 transform=text_transform,
-                 bbox=dict(facecolor='sandybrown', alpha=0.5, boxstyle='round'))
-    plt.show()
-    plt.gcf().canvas.draw()
-    fig = plt.figure()
-    canvas = FigureCanvasTkAgg(fig, master=window)
-    canvas.get_tk_widget().grid(row=1,column=24)
-    canvas.draw()
-
 def plotBoundaries():   # Function to create a plot showing the boundaries of the lake
     global poly
     global boundaryArrayLat
@@ -161,7 +120,7 @@ def main():
     global angle
     global speed
     global p_chart
-    angle = 30
+    angle = 0
     speed = 10
     gc_modes = GCMode()
     boat_origin = LatLon(34.515647653125,-112.38510863245823)
@@ -177,8 +136,9 @@ def main():
     extentLat = -0.007983 # set the extent of the lattitude from orgin to edge
     extentLon = 0.006978 # set the extent of the Longitude from orgin to edge
         # Create a tkinter object
-    root = tk.Tk()
+    root = Tk()
         #create canvas for the controlCenter
+    root.geometry("1920x1080")
     controlCenter = Canvas(root, width=1920, height=1080)
     controlCenter.pack()
         # process an image for the waypoint selection window
@@ -186,7 +146,7 @@ def main():
     original = Image.open(File)
     img = ImageTk.PhotoImage(original) # create a Tk image from the file
     waypointTitle = tk.Label(controlCenter, text = "Waypoint Nav Selection").place(x = 180, y = 10)
-    controlCenter.create_image(30, 30, image=img, anchor="nw") # add the image to the controlCenter canvas
+    # controlCenter.create_image(30, 30, image=img, anchor="nw") # add the image to the controlCenter canvas
         # set values for the scaling factor to be used in defining canvas boundaries
     xmLon = extentLon
     ymLat = extentLat
@@ -197,64 +157,7 @@ def main():
     #  At some point I think I can put all this into an object using classes or something,
     #   for now avert your eyes future me and pretend there are now functions here
     #
-
-    def getorigin(eventorigin): # Determine the origin
-        tk.messagebox.showinfo("Startup","Not setup yet, spam click till you see the all good message")
-        global x0,y0
-        x0 = 34
-        y0 = 609
-        controlCenter.bind("<Button 1>",getextentx)
-    # mouseclick event
-    controlCenter.bind("<Button 1>",getorigin)
-
-    # Determine the extent of the figure in the x direction (Longitude)
-    def getextentx(eventextentx):
-        global xe
-        xe = 453
-        controlCenter.bind("<Button 1>",getextenty)
-
-    # Determine the extent of the figure in the y direction (Lattitude)
-    def getextenty(eventextenty):
-        global ye
-        ye = 33
-        tk.messagebox.showinfo("All good!", "The grid is all good. Start Navigating")
-        controlCenter.bind("<Button 1>",select_way)
-
     # print the coords to the console
-    def select_way(event):
-        global lock
-        global boat_origin
-        global desired_waypoint
-        global setWay
-        global boundaryArrayLon
-        global boundaryArrayLat
-        xDelta = xe-x0
-        xm = xmLon/xDelta
-        yDelta = ye-y0
-        ym = -ymLat/yDelta
-        # Perform coordinate transformation to normalize results
-        lonWaypoint = (event.x-x0)*(xm)+xInitial
-        latWaypoint = (event.y-y0)*(ym)+yInitial
-        if(setWay == True):
-            desired_waypoint.lat = latWaypoint
-            desired_waypoint.lon = lonWaypoint
-            print(desired_waypoint.lat)
-            print(desired_waypoint.lon)
-            setWay = False
-            tk.Label(controlCenter, text = "                                                                                                ").place(x = 30, y = 640)
-            tk.Label(controlCenter, text = " The waypoint was placed at: Lattitude: "+str(desired_waypoint.lat)+", Longitude: "+str(desired_waypoint.lon)).place(x = 30, y = 640)
-            tk.Label(controlCenter, text = "                                                                             ").place(x = 30, y = 620)
-        if (boundOn == True):
-            boundaryArrayLon.append(lonWaypoint)
-            boundaryArrayLat.append(latWaypoint)
-
-    def set_origin_and_waypoint():
-        global setWay
-        if (setWay == False):
-            setWay = True
-            tk.Label(controlCenter, text = "Place the desired waypoint of the boat: ").place(x = 30, y = 620)
-        elif (setWay == True):
-            setWay = False
 
     def latlon_to_serial():
         global desired_waypoint
@@ -272,52 +175,60 @@ def main():
         boat_origin.lon = arduino.readline().decode('utf-8').rstrip()
         # arduino.write(bytes(str(curr_comm_mode), 'utf-8'))
 
-    def define_boundaries():
-        global boundOn
-        boundOn = True
-        tk.Label(controlCenter, text = "Begin mapping boundaries: ").place(x = 30, y = 610)
+    def plotStuff():    # Function to create a plot showing user selected waypoints
+         # Create a Stamen Terrain instance.
+        global desired_waypoint
+        global boat_origin
+        stamen_terrain = cimgt.OSM()
+        # Create a GeoAxes in the tile's projection.
+        ax = plt.axes(projection=stamen_terrain.crs)
+        zoomRatio = 0.005
+        waypoint_num = 1
+        # Limit the extent of the map to a small longitude/latitude range.
+        ax.set_extent([-112.388989, -112.382, 34.5150517, 34.5230208])
+        # ax.set_extent([-55, -45, 40, 50])
+        scale = np.ceil(-np.sqrt(2)*np.log(np.divide(zoomRatio,350.0))) # empirical solve for scale based on zoom
+        scale = (scale<20) and scale or 19 # scale cannot be larger than 19
+        ax.add_image(stamen_terrain, int(scale))
+        # plot the line the boat would ideally take
+        plt.title("Waypoint tracked path")
+        plt.plot(desired_waypoint.lon, desired_waypoint.lat, marker='x', color='red', markersize=7,
+                     alpha=0.7, transform=ccrs.Geodetic())
+        geodetic_transform = ccrs.Geodetic()._as_mpl_transform(ax)
+        text_transform = offset_copy(geodetic_transform, units='dots', x=-25)
+        plt.text(desired_waypoint.lon, desired_waypoint.lat, u'Target Waypoint',
+                     verticalalignment='top', horizontalalignment='left',
+                     transform=text_transform,
+                     bbox=dict(facecolor='sandybrown', alpha=0.5, boxstyle='round'))
 
-    def stopBoundaries():
-        global boundOn
-        boundOn = False
-        tk.Label(controlCenter, text = "                                                  ").place(x = 30, y = 610)
-
-    def write_to_file():
-        global boundaryArrayLon
-        global boundaryArrayLat
-        boundaryArrayLon = np.array(boundaryArrayLon)
-        boundaryArrayLat = np.array(boundaryArrayLat)
-        n = boundaryArrayLat.size
-        if(n != boundaryArrayLon.size):
-            print("!!!There is an ERROR, not equal values for lat and lon!!!")
-        # result_file = open('outputBoundaries.csv', 'a')
-        lat_lon_array = pd.DataFrame(
-            {'Lattitude': boundaryArrayLat,
-             'Longitude': boundaryArrayLon
-            })
-        lat_lon_array.to_csv('newOutputBoundaries.csv')
-
-    def read_boundaries_from_csv():
-        global boundaryArrayLat
-        global boundaryArrayLon
-        global coordTuple
-        temp_container = pd.read_csv('newOutputBoundaries2.csv')
-        temp_container = np.array(temp_container)
-        boundaryArrayLat = temp_container[:,1]
-        boundaryArrayLon = temp_container[:,2]
-        boundaryArrayLon = np.array(boundaryArrayLon)
-        boundaryArrayLat = np.array(boundaryArrayLat)
-        coordTuple = np.array((boundaryArrayLon,boundaryArrayLat)).T
-        # print(coordTuple)
-        create_polygon()
+        plt.plot(boat_origin.lon, boat_origin.lat, marker='x', color='red', markersize=7,
+                     alpha=0.7, transform=ccrs.Geodetic())
+        geodetic_transform = ccrs.Geodetic()._as_mpl_transform(ax)
+        text_transform = offset_copy(geodetic_transform, units='dots', x=-25)
+        plt.text(boat_origin.lon, boat_origin.lat, u'Boat starting position',
+                     verticalalignment='top', horizontalalignment='left',
+                     transform=text_transform,
+                     bbox=dict(facecolor='sandybrown', alpha=0.5, boxstyle='round'))
+        plt.show()
+        plt.gcf().canvas.draw()
+        fig = plt.figure()
+        canvas = FigureCanvasTkAgg(fig, master = root)
+        canvas.get_tk_widget().grid(row=1,column=24)
+        canvas.draw()
+        canvas.get_tk_widget().pack()
+        toolbar = NavigationToolbar2Tk(canvas,
+                                   root)
+        toolbar.update()
+        canvas.get_tk_widget().pack()
 
     def create_polygon():
         global coordTuple
-        global poly
         global boat_poly
         global boat_poly2
         global rock1_poly
         global rock2_poly
+        read_boundaries_from_csv()
+        global poly
         world_exterior = [(-112.388989, 34.5230208), (-112.388989, 34.5150517), (-112.382, 34.5150517), (-112.382, 34.5230208)]
         poly = Polygon(coordTuple)
         # poly_extr = poly.exterior
@@ -338,6 +249,20 @@ def main():
         else:
             print("Danger the boat is at risk of collision")
 
+    def read_boundaries_from_csv():
+        global boundaryArrayLat
+        global boundaryArrayLon
+        global coordTuple
+        temp_container = pd.read_csv('newOutputBoundaries2.csv')
+        temp_container = np.array(temp_container)
+        boundaryArrayLat = temp_container[:,1]
+        boundaryArrayLon = temp_container[:,2]
+        boundaryArrayLon = np.array(boundaryArrayLon)
+        boundaryArrayLat = np.array(boundaryArrayLat)
+        coordTuple = np.array((boundaryArrayLon,boundaryArrayLat)).T
+        # print(coordTuple)
+        create_polygon()
+
     def initialize_polar_chart():
         global sailor
         global boat
@@ -348,36 +273,43 @@ def main():
 
 
     def get_heading():
+        initialize_polar_chart()
         global p_chart
         global speed
         global angle
         sailor = Sailing(p_chart)
-        h_angle, p_time, second_h_angle = sailor.get_optimal_direction(speed, angle)
+        h_angle, p_time, second_h_angle = sailor.get_optimal_direction(int(speed), int(angle))
         tk.Label(controlCenter, text = "If the wind is blowing at " + str(angle) + " degrees, at a speed of " + str(speed) + " knots").place(x = 460, y = 570)
+        tk.Label(controlCenter, text = "                                                                                                                                                                                                          ").place(x = 460, y = 600)
         tk.Label(controlCenter, text = "Optimal boat direction for current wind speed is: "+ str(h_angle)+ " degrees to the wind, maintained for "+ str(int(p_time))+"% of the time").place(x = 460, y = 600)
+        tk.Label(controlCenter, text = "                                                                                                                                                                                                  ").place(x = 460, y = 630)
         if (second_h_angle > 0):
             tk.Label(controlCenter, text = "The second angle for the boat to tack to, is: "+ str(second_h_angle) + "degrees, for "+ str(int(100 - p_time)) + "% of the time").place(x = 460, y = 630)
 
-    def create_circle(x, y, r, canvasName): #center coordinates, radius
-        x0 = x - r
-        y0 = y - r
-        x1 = x + r
-        y1 = y + r
-        return canvasName.create_oval(x0, y0, x1, y1)
+    def set_TWA():
+        global angle
+        angle = entry1.get()
+        tk.Label(controlCenter, text= "                                                                       ").place(x = 1000, y = 170)
+        tk.Label(controlCenter, text= "The True Wind Angle was set to: "+ str(angle)).place(x = 1000, y = 170)
 
-    create_circle(1000, 200, 120, controlCenter)
+    def set_TWS():
+        global speed
+        speed = entry2.get()
+        tk.Label(controlCenter, text= "                                                                     ").place(x = 1000, y = 230)
+        tk.Label(controlCenter, text= "The True Wind speed was set to: "+ str(speed)).place(x = 1000, y = 230)
+
+    entry1 = tk.Entry(root)
+    controlCenter.create_window(1000, 140, window=entry1)
+    entry2 = tk.Entry(root)
+    controlCenter.create_window(1000, 200, window=entry2)
 
     tk.Button(controlCenter, text='Show real Plot', command = plotStuff). place(x = 460, y = 60)
-    tk.Button(controlCenter, text='Set Boat Waypoint', command = set_origin_and_waypoint).place(x = 460, y = 30)
     tk.Button(controlCenter, text='Send Waypoint to comms board', command = latlon_to_serial).place(x = 460, y = 90)
     tk.Button(controlCenter, text='Get the origin coords of the boat', command = get_boat_origin).place(x = 460, y = 120)
-    tk.Button(controlCenter, text='Define boundaries', command = define_boundaries).place(x = 460, y = 150)
-    tk.Button(controlCenter, text='Stop defining boundaries', command = stopBoundaries).place(x = 460, y = 180)
-    tk.Button(controlCenter, text='Write boundaries to CSV', command = write_to_file).place(x = 460, y = 210)
-    tk.Button(controlCenter, text='Read csv for boundaries', command = read_boundaries_from_csv). place(x = 460, y = 240)
     tk.Button(controlCenter, text='Show boundary Plot', command = plotBoundaries). place(x = 460, y = 270)
-    tk.Button(controlCenter, text='Initialize the Polar chart', command = initialize_polar_chart). place(x = 460, y = 300)
     tk.Button(controlCenter, text='Get the heading', command = get_heading). place(x = 460, y = 330)
+    tk.Button(controlCenter, text = 'Input wind angle', command = set_TWA).place(x = 1100, y = 140)
+    tk.Button(controlCenter, text = 'Input wind speed', command = set_TWS).place(x = 1100, y = 200)
 
         # loop until the code inevitably crashes again because tkinter is ass
     root.mainloop()
