@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import re
 
+
 def random_shifted_pt(pt, mul):
     pt = np.array(pt)
     rand = np.random.random(pt.shape) - 0.5
@@ -51,7 +52,7 @@ class Polar():
         # self.pd.plot_flat(ws=ws, ax=plt.subplot(2, 2, 3))
         # self.pd.plot_color_gradient(ax=plt.subplot(2, 2, 4))
         # plt.show()
-        print(self.pd)
+        # print(self.pd)
         return self.pd
 
 class Sailing():
@@ -64,18 +65,51 @@ class Sailing():
             tack_angle = 360 - heading_angle
         else:
             tack_angle = 0
-        print(heading[0])
+        # print(heading[0])
         return heading_angle, percent_of_trip, tack_angle
         # print("The wind is coming from " + str(angle) + " degrees, at a speed of " + str(speed) +" Knotts") # commented out print statements, use for debug
         # print(heading_angle)
         # print(percent_of_trip)
         # print(tack_angle)
 
-# def main():
-#     boat = Polar()
-#     p_chrt = boat.plot_polar()
-#     sailor = Sailing(p_chrt)
-#     sailor.get_optimal_direction(8, 45)
+    def get_cruise(self, speed, angle):
+        onek = 1000
+        pd = pol.from_csv("testdata2.csv", fmt="array").symmetrize()
+        a1, t1, a2, t2, dist = sail.cruise(pd,speed, angle, (34.515 * onek, -112.385 * onek), (34.5215 * onek, -112.386 * onek))
+        # res = self._right_handing_course((42.2, 42.5),(42.3, 44.3))
+        # return res
+        # print(angle[0])
+        # # angle_fix, time = [float(s) for s in re.findall(r'-?\d+\.?\d*', str(angle[0]))]
+        # if (len(angle) > 1):
+        #     angle_fix2, time2 = [float(s) for s in re.findall(r'-?\d+\.?\d*', str(angle[1]))]
+        # print(a1)
+        # print(t1)
+        # print(a2)
+        # print(t2)
+        return a1, t1, a2, t2, dist
+        # print(head_array)
+
+    def _right_handing_course(self, a, b):
+        """Calculates course between two points on the surface of the earth
+        relative to true north
+        """
+        numerator = np.cos(a[1]) * np.sin(b[1]) - np.cos(a[0] - b[0]) * np.cos(
+            b[1]
+        ) * np.sin(a[1])
+        denominator = np.cos(a[0] - b[0]) * np.cos(a[1]) * np.cos(b[1]) + np.sin(
+            a[1]
+        ) * np.cos(b[1])
+
+        return np.arccos([numerator, np.sqrt(1 - denominator ** 2)])
+
+def main():
+    boat = Polar()
+    p_chrt = boat.plot_polar()
+    sailor = Sailing(p_chrt)
+    sailor.get_optimal_direction(8, 45)
+    # for i in range(36):
+    sailor.get_cruise(10, 0)
+
 #
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()

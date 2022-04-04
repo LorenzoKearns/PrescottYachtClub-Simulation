@@ -141,23 +141,6 @@ def main():
     root.geometry("1920x1080")
     controlCenter = Canvas(root, width=1920, height=1080)
     controlCenter.pack()
-        # process an image for the waypoint selection window
-    File = 'newLynxLake.png' # path to image that shall be used
-    original = Image.open(File)
-    img = ImageTk.PhotoImage(original) # create a Tk image from the file
-    waypointTitle = tk.Label(controlCenter, text = "Waypoint Nav Selection").place(x = 180, y = 10)
-    # controlCenter.create_image(30, 30, image=img, anchor="nw") # add the image to the controlCenter canvas
-        # set values for the scaling factor to be used in defining canvas boundaries
-    xmLon = extentLon
-    ymLat = extentLat
-        # set the initial positions in lat and longitude at the origin
-    xInitial = lonOrig
-    yInitial = latOrig
-    # Ill be real, I Just totally gave up on proper function formatting since they are all in the damn loop.
-    #  At some point I think I can put all this into an object using classes or something,
-    #   for now avert your eyes future me and pretend there are now functions here
-    #
-    # print the coords to the console
 
     def latlon_to_serial():
         global desired_waypoint
@@ -210,16 +193,6 @@ def main():
                      transform=text_transform,
                      bbox=dict(facecolor='sandybrown', alpha=0.5, boxstyle='round'))
         plt.show()
-        plt.gcf().canvas.draw()
-        fig = plt.figure()
-        canvas = FigureCanvasTkAgg(fig, master = root)
-        canvas.get_tk_widget().grid(row=1,column=24)
-        canvas.draw()
-        canvas.get_tk_widget().pack()
-        toolbar = NavigationToolbar2Tk(canvas,
-                                   root)
-        toolbar.update()
-        canvas.get_tk_widget().pack()
 
     def create_polygon():
         global coordTuple
@@ -234,7 +207,7 @@ def main():
         # poly_extr = poly.exterior
         boat_dimensions = [(-112.3849, 34.515105), (-112.3849, 34.5151), (-112.384799, 34.51508), (-112.384802, 34.51508)]
         boat_poly = Polygon(boat_dimensions)
-        boat_dimensions2 = [(-112.3849, 34.51611), (-112.3849, 34.5161), (-112.384799, 34.5161), (-112.384802, 34.5161)]
+        boat_dimensions2 = [(-112.3849, 34.5161),(-112.3849012, 34.51610205), (-112.3849018, 34.5161041), (-112.384901, 34.51610605), (-112.3849, 34.516116)]
         boat_poly2 = Polygon(boat_dimensions2)
         rock1_dimensions = [(-112.38556, 34.5192), (-112.3854, 34.52), (-112.3849, 34.5196)]
         rock1_poly = Polygon(rock1_dimensions)
@@ -270,7 +243,6 @@ def main():
         boat = Polar()
         p_chart = boat.plot_polar()
         print("test")
-
 
     def get_heading():
         initialize_polar_chart()
