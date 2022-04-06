@@ -12,7 +12,7 @@ TACKMODE_ADJ_NEG = 2
 TACKMODE_MAXDEV_POS = 3
 TACKMODE_MAXDEV_NEG = 4
 
-MENU = 40
+MENU = 4
 W = 1500.0
 H = 750.0
 MAXW = 10*W
@@ -49,11 +49,11 @@ MAXDEV = 500000
 MAXDEV_OK_FACTOR = 0.75
 MAXDEV_OK = MAXDEV * MAXDEV_OK_FACTOR
 
-WAYPOINT0 = 46.913520, -52.998886
-WAYPOINT1 = 48.0, -13.0
+# WAYPOINT0 = 46.913520, -52.998886
+# WAYPOINT1 = 48.0, -13.0
 
-# WAYPOINT0 = -112.38586, 34.5217
-# WAYPOINT1 = -112.3849, 34.5161
+WAYPOINT0 =  34.5217, -112.38586,
+WAYPOINT1 =  34.5161, -112.3849
 
 tackmode = TACKMODE_DIRECTLY
 
@@ -62,7 +62,7 @@ gps_lat_prev, gps_lng_prev = gps_lat, gps_lng
 
 trueHeading = 45.0
 MAX_SPEED = 2000000.0
-GHOST_DISTANCE = 500000.0
+GHOST_DISTANCE = 5.0
 trueWind = 0.0
 
 dt = 0.001
@@ -652,12 +652,12 @@ c.pack(side=LEFT, expand=True, fill=BOTH)
 c.bind("<Button-1>", changeWind)
 c.bind("<B1-Motion>", changeWind)
 
-gps_create_greatcircle(*WAYPOINT0, *WAYPOINT1, 500000.0, fill='red', width=1, tags='path')
+gps_create_greatcircle(*WAYPOINT0, *WAYPOINT1, 5.0, fill='red', width=1, tags='path')
 
 drawDot(*gps2xy(*WAYPOINT0), DOT_RADIUS, 'red', 'path')
 drawDot(*gps2xy(*WAYPOINT1), DOT_RADIUS, 'red', 'path')
 
-RADIUS = 70000.0
+RADIUS = 700.0
 
 gps_drawCircle(*WAYPOINT1, RADIUS, 'red', 'path')
 
