@@ -16,7 +16,8 @@ from utilities import Tools
 import numpy as np
 import re
 
-class WayFinder():
+
+class Wayfinder():
     """
         Class object is a part of a larger structure,
         functions included help to make up the adaptive
@@ -35,15 +36,18 @@ class WayFinder():
         self.pd = self.create_polar()
 
     def create_polar(self):
-        """
-            Creates polar charts
-        """
         ws = [6, 8, 10, 12, 14, 16, 20]
         self.pd.plot_polar(ws=ws, ax=plt.subplot(1, 2, 1, projection="polar"))
         self.pd.plot_convex_hull(ws=ws, ax=plt.subplot(1, 2, 2, projection="polar"))
         return self.pd
 
-    def get_ideal_bearing(self, TWS, TWA):
-        heading = sail.convex_direction(self.pd, TWS, TWA)
-        heading_angle, percent_of_trip = [float(s) for s in re.findall(r'-?\d+\.?\d*', str(heading[0]))]
-        return heading_angle
+
+"""
+    Main for testing program as standalone while
+    the other programs are unfinished
+"""
+def main():
+    Way = Wayfinder()
+#
+if __name__ == '__main__':
+    main()

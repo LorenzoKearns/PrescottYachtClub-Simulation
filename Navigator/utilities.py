@@ -2,9 +2,9 @@ from math import *
 import numpy as np
 
 class Tools():
-    def rotate(self, x1, y1, a1, x0, y0):
+    def rot(self, x1, y1, a1, x0, y0):
         """
-            Rotate an object for tkinter
+            Rotate an object
         """
         b = self.deg2rad(a1)
         return x0 + (x1 - x0)*cos(b) - (y1 - y0)*sin(b), \
