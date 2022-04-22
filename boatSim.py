@@ -25,12 +25,14 @@ from Compass import Compass
 from turtle import *
 #****************************************************************#
 #
+# Notable Edge cases:
+# Wind direction 143, makes it close to target but spins infinitely a but from the target, 4 degree error in position versus desired target is cause
 #
 ## Per run changable constants:
 STARTING_POS =   34.515501, -112.384901
 WAYPOINT1 =   34.521701, -112.3858601
 WIND_SPEED_KNOTTS = 20
-SCALE = 10
+SCALE = 5
 
 ## Strict definitions:
 W = 1051.05971816
@@ -242,9 +244,9 @@ class LynxLakeSimulation(tk.Frame):
             #scroll functionality
             x0 = self.hbar.get()[0] * MAXW
             y0 = self.vbar.get()[0] * MAXH
-            if x < x0 or x > x0 + 100*(SCALE/3) or y < y0 or y > y0 + 100*(SCALE/3):
+            if x < x0 or x > x0 + 100*(SCALE/2) or y < y0 or y > y0 + 100*(SCALE/2):
                 self.c.xview_moveto((x - W/2)/MAXW)
-                self.c.yview_moveto((y - H/6)/MAXH)
+                self.c.yview_moveto((y - H/2)/MAXH)
                 root.update()
             #wind direction arrow object, tracks to boat
             self.c.delete('wind_dir')
@@ -283,7 +285,6 @@ class LynxLakeSimulation(tk.Frame):
         self.CourseBoi.check_dist_to_target(self.gpsLat,self.gpsLng, WAYPOINT1)
 
         if(abs(self.gpsLat - WAYPOINT1[0]) < 0.00003 and abs(self.gpsLng - WAYPOINT1[1]) < 0.00003):
-            print("satisified positional reqs")
             self.stopped = not self.stopped
             self.finishedLab.delete('1.0', END)
             self.finishedLab.insert(END, "Waypoint Reached, Simulation complete")

@@ -218,7 +218,7 @@ class CoursePlotter():
             Determines what type of path, i.e beating, curved, straight, etc
             is best for the current wind conditions to reach the desired waypoint
         """
-        print(self.directPathOrient)
+        # print(self.directPathOrient) # testing statement
         if(self.in_no_go_range(self.directPathOrient)):
             print("beating required")
             self.mode = "beat"

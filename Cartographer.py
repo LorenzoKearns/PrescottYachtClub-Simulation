@@ -34,7 +34,7 @@ class Cartographer():
         self.boatLength = self.SAK.ft_to_latlon(6)
         self.safetyThresh = self.SAK.ft_to_latlon(shoreThresh) # defines the distance in feet that is safe
         # print(self.safetyThresh)
-        LakeEdgesTemp = pd.read_csv('newOutputBoundaries2.csv') # read the definition of the lake from a csv
+        LakeEdgesTemp = pd.read_csv('OutputBoundaries.csv') # read the definition of the lake from a csv
         LakeEdgesTemp = np.array(LakeEdgesTemp) # convert csv values into a numpy array
         self.LakeEdges = self.create_polygon_from_csv(LakeEdgesTemp) # create a polygon object that represents the lake
         self.listOfLakeEdgesLon, self.listOfLakeEdgesLat = self.create_polygon_from_csv(LakeEdgesTemp, get_list =  True)
