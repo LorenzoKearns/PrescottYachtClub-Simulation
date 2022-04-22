@@ -19,7 +19,6 @@ import numpy as np
 from numpy import random
 from math import *
 from CoursePlotter import CoursePlotter
-# from glob import *
 from utilities import Tools
 import threading
 from Compass import Compass
@@ -27,10 +26,13 @@ from turtle import *
 #****************************************************************#
 #
 #
+## Per run changable constants:
 STARTING_POS =   34.515501, -112.384901
 WAYPOINT1 =   34.521701, -112.3858601
 WIND_SPEED_KNOTTS = 20
-SCALE = 20
+SCALE = 10
+
+## Strict definitions:
 W = 1051.05971816
 H = 1200.0
 MAXW = SCALE*W
@@ -39,6 +41,7 @@ LATMIN = 34.5150517
 LONMIN = -112.388989
 SCALE_LON = 0.00698
 SCALE_LAT = 0.0079691
+# Boat size parameters
 BOAT_LENGTH = ((5.6667*1.0)/2915) * MAXH
 BOAT_BOW = ((5.6667*0.3)/2915) * MAXH
 BOAT_WIDTH = (1.0/2018) * MAXW
@@ -46,11 +49,12 @@ RUDDER_LENGTH = (1.2/2915) * MAXH
 SAIL_LENGTH = (1.8/2018) * MAXW
 DOT_RADIUS = (0.2/2018) * MAXW
 WIND_COMPASS = (2.8/2915) * MAXH
-HEADING_ARROW = (2.8/2915) * MAXH
-RUDDER_RESPONSE = 500000.005
-RUDDER_COEFF = 40.0
+HEADING_ARROW = (2.8/2915) * MAXH * 10/SCALE
+#rudder movement
+RUDDER_RESPONSE = 5000000.005
 RUDDER_MIN_ANGLE = -30
 RUDDER_MAX_ANGLE = 30
+# time refresh
 dt = 0.001
 dt_refresh = 4*dt
 
@@ -120,12 +124,11 @@ class LynxLakeSimulation(tk.Frame):
         trueHeading = 0
         x = random.randint(360)
         trueWind = self.SAK.mod360(x)
-        trueWind = 180
         self.compass = Compass(trueHeading, trueWind)
         self.gpsLat, self.gpsLng = STARTING_POS
         self.gpsLatPrev, self.gpsLngPrev = self.gpsLat, self.gpsLng
         self.angleOfSail = 0.0
-        self.speed = WIND_SPEED_KNOTTS/2000000
+        self.speed = WIND_SPEED_KNOTTS/1000000
         self.rudder = 0.0
         # self.x_prev, self.y_prev = self.LatLontoXY(self.gpsLat, self.gpsLng)
 
@@ -204,10 +207,10 @@ class LynxLakeSimulation(tk.Frame):
                     self.SAK.rotate(x + BOAT_WIDTH/4, y - BOAT_LENGTH/3.42, self.SAK.mod360(self.compass.vesselBearing), x, y),
                     self.SAK.rotate(x + BOAT_WIDTH/8, y - BOAT_LENGTH/2.1, self.SAK.mod360(self.compass.vesselBearing), x, y)]
         self.c.delete('boat') # remove the last intance of the boat and then create a new boat
-        if(self.CourseBoi.is_safe(self.gpsLng, self.gpsLat, self.compass.vesselBearing)):
-            self.c.create_polygon(points, fill='white', width=0, tags='boat')
-        else:
-            self.c.create_polygon(points, fill='red', width=0, tags='boat')
+        # if(self.CourseBoi.is_safe(self.gpsLng, self.gpsLat, self.compass.vesselBearing)):
+        self.c.create_polygon(points, fill='white', width=0, tags='boat')
+        # else:
+        #     self.c.create_polygon(points, fill='red', width=0, tags='boat')
         if(self.CourseBoi.is_collison()):
             self.paused = not self.paused
         #Update the position of the rudder
@@ -260,7 +263,7 @@ class LynxLakeSimulation(tk.Frame):
         self.Theading.delete('1.0', END)
         self.Theading.insert(END, self.compass.vesselBearing)
         self.Dheading.delete('1.0', END)
-        self.Dheading.insert(END, self.angleOfSail)
+        self.Dheading.insert(END, self.desHeading)
         self.LocationLat.delete('1.0', END)
         self.LocationLat.insert(END, self.gpsLat)
         self.LocationLon.delete('1.0', END)
@@ -268,8 +271,8 @@ class LynxLakeSimulation(tk.Frame):
 
     def move_cycle(self):
         if not self.paused:
-            self.desHeading = self.CourseBoi.is_safe(self.gpsLng, self.gpsLat, self.desHeading)
-            print(self.desHeading)
+            self.desHeading = self.CourseBoi.find_course(self.gpsLng, self.gpsLat, self.compass.vesselBearing)
+            # print(self.desHeading)
             self.adjustRudder()
             self.move_forward()
 
