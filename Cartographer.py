@@ -93,8 +93,9 @@ class Cartographer():
         # mytext = 'Danger will robinson! ooooooooooooooooooooo ooooooooo'
         # language = 'en'
         distShore = self.boatPos.exterior.distance(self.LakeEdges.exterior)
+        # print(distShore)
         if(distShore - self.safetyThresh < 0):
-            print("Warning, shore collision imminent!")
+            # print("Warning, shore collision imminent!")
             # if(time.perf_counter() - self.timer1 > 20):
             #     myobj = gTTS(text=mytext, lang=language, slow=False)
             #     myobj.save("welcome.mp3")
@@ -105,6 +106,12 @@ class Cartographer():
             return True
 
     def check_collison(self):
+        """
+            Basis for CoursePlotters is_collision()
+            function, Needs adjustment either here or in CoursePlotter
+            Checks if the boat polygon has collided with the lake polygon
+            by seeing if distance is equal to zero
+        """
         distShore = self.boatPos.exterior.distance(self.LakeEdges.exterior)
         if (distShore - self.safetyThresh == 0):
             return True

@@ -19,13 +19,41 @@ import numpy as np
 from numpy import random
 from math import *
 from CoursePlotter import CoursePlotter
-from glob import *
+# from glob import *
 from utilities import Tools
 import threading
 from Compass import Compass
+from turtle import *
 #****************************************************************#
 #
 #
+STARTING_POS =   34.515501, -112.384901
+WAYPOINT1 =   34.521701, -112.3858601
+WIND_SPEED_KNOTTS = 20
+SCALE = 20
+W = 1051.05971816
+H = 1200.0
+MAXW = SCALE*W
+MAXH = SCALE*H
+LATMIN = 34.5150517
+LONMIN = -112.388989
+SCALE_LON = 0.00698
+SCALE_LAT = 0.0079691
+BOAT_LENGTH = ((5.6667*1.0)/2915) * MAXH
+BOAT_BOW = ((5.6667*0.3)/2915) * MAXH
+BOAT_WIDTH = (1.0/2018) * MAXW
+RUDDER_LENGTH = (1.2/2915) * MAXH
+SAIL_LENGTH = (1.8/2018) * MAXW
+DOT_RADIUS = (0.2/2018) * MAXW
+WIND_COMPASS = (2.8/2915) * MAXH
+HEADING_ARROW = (2.8/2915) * MAXH
+RUDDER_RESPONSE = 500000.005
+RUDDER_COEFF = 40.0
+RUDDER_MIN_ANGLE = -30
+RUDDER_MAX_ANGLE = 30
+dt = 0.001
+dt_refresh = 4*dt
+
 class LynxLakeSimulation(tk.Frame):
     """
         Houses the GUI for the simulation as well as defines
@@ -34,9 +62,13 @@ class LynxLakeSimulation(tk.Frame):
     def __init__(self, master=None):
         tk.Frame.__init__(self,master)
         self.init_sim_utility()
-        self.plot_boundaries()
         self.init_sim_conditions()
         self.init_buttons()
+        self.CourseBoi = CoursePlotter(STARTING_POS, WAYPOINT1, self.compass.windRelNorth)
+        self.plot_boundaries()
+        self.compass.vesselBearing = self.CourseBoi.set_path_type()
+        self.CourseBoi.define_speed(WIND_SPEED_KNOTTS)
+        self.desHeading = self.compass.vesselBearing
 
     def init_sim_utility(self):
         """
@@ -44,10 +76,10 @@ class LynxLakeSimulation(tk.Frame):
             things that contribute to the utilites
             of the simulation
         """
-        self.CourseBoi = CoursePlotter()
         self.SAK = Tools()
         self.bound = []
         self.paused = False
+        self.stopped = False
         frame = Frame(root)
         frame.pack()
         button_pause = Button(frame, text="Pause/Resume", command=self.pause)
@@ -74,7 +106,10 @@ class LynxLakeSimulation(tk.Frame):
         self.LatLabel.insert(END, "Lattitude:")
         self.LocationLat = Text(frame, height=1, width=12)
         self.LocationLat.pack(side = LEFT)
-
+        self.finishedLab = Text(frame, height=1, width=40)
+        self.finishedLab.pack(side = LEFT)
+        self.finishedLab.delete('1.0', END)
+        # self.finishedLab.insert(END, "Waypoint Reached, Simulation complete")
         self.c = Canvas(root, width=W, height=H, bg="Green", scrollregion=(0, 0, MAXW, MAXH))
 
     def init_sim_conditions(self):
@@ -82,14 +117,16 @@ class LynxLakeSimulation(tk.Frame):
             Defines the initial conditions that run the SIM
             sets up wind and initial bearing, stuff like that
         """
-        trueHeading = 90
+        trueHeading = 0
         x = random.randint(360)
         trueWind = self.SAK.mod360(x)
-        trueWind = 350
+        trueWind = 180
         self.compass = Compass(trueHeading, trueWind)
-        self.gpsLat, self.gpsLng = WAYPOINT0
+        self.gpsLat, self.gpsLng = STARTING_POS
         self.gpsLatPrev, self.gpsLngPrev = self.gpsLat, self.gpsLng
         self.angleOfSail = 0.0
+        self.speed = WIND_SPEED_KNOTTS/2000000
+        self.rudder = 0.0
         # self.x_prev, self.y_prev = self.LatLontoXY(self.gpsLat, self.gpsLng)
 
     def init_buttons(self):
@@ -143,6 +180,14 @@ class LynxLakeSimulation(tk.Frame):
         """
         self.paused = not self.paused
 
+    def adjustRudder(self):
+        if (abs(self.compass.vesselBearing - self.desHeading) < 0.5):
+            self.rudder = 0
+        elif (self.compass.vesselBearing < self.desHeading):
+            self.rudder = RUDDER_MAX_ANGLE
+        elif (self.compass.vesselBearing > self.desHeading):
+            self.rudder = RUDDER_MIN_ANGLE
+
     def render(self):
         """
             Renders the boat and updates its position and orientation
@@ -166,8 +211,8 @@ class LynxLakeSimulation(tk.Frame):
         if(self.CourseBoi.is_collison()):
             self.paused = not self.paused
         #Update the position of the rudder
-        points = [*self.SAK.rotate(*self.SAK.rotate(x, y + BOAT_LENGTH/2, rudder, x, y + BOAT_LENGTH/2), self.SAK.mod360(self.compass.vesselBearing), x, y),
-                    *self.SAK.rotate(*self.SAK.rotate(x, y + BOAT_LENGTH/2 + RUDDER_LENGTH, rudder, x, y + BOAT_LENGTH/2), self.SAK.mod360(self.compass.vesselBearing), x, y)]
+        points = [*self.SAK.rotate(*self.SAK.rotate(x, y + BOAT_LENGTH/2, self.rudder, x, y + BOAT_LENGTH/2), self.SAK.mod360(self.compass.vesselBearing), x, y),
+                    *self.SAK.rotate(*self.SAK.rotate(x, y + BOAT_LENGTH/2 + RUDDER_LENGTH, self.rudder, x, y + BOAT_LENGTH/2), self.SAK.mod360(self.compass.vesselBearing), x, y)]
         self.c.delete('rudder')
         self.updateLine(*points, fill='black', width=2, tags = 'rudder')
         #sail
@@ -186,7 +231,7 @@ class LynxLakeSimulation(tk.Frame):
             Threaded cycle which handles scorll lock to the boat and other aspects of the simulation
         """
         x, y = self.LatLontoXY(self.gpsLat, self.gpsLng)
-        if not self.paused:
+        if not self.paused and not self.stopped:
             self.refresh()
             #Generates a trail behind the boat
             self.c.create_line(self.x_prev, self.y_prev, x, y, fill='black', width=1, tags='boat_path')
@@ -194,7 +239,7 @@ class LynxLakeSimulation(tk.Frame):
             #scroll functionality
             x0 = self.hbar.get()[0] * MAXW
             y0 = self.vbar.get()[0] * MAXH
-            if x < x0 or x > x0 +100 or y < y0 or y > y0 +100 :
+            if x < x0 or x > x0 + 100*(SCALE/3) or y < y0 or y > y0 + 100*(SCALE/3):
                 self.c.xview_moveto((x - W/2)/MAXW)
                 self.c.yview_moveto((y - H/6)/MAXH)
                 root.update()
@@ -221,22 +266,54 @@ class LynxLakeSimulation(tk.Frame):
         self.LocationLon.delete('1.0', END)
         self.LocationLon.insert(END, self.gpsLng)
 
+    def move_cycle(self):
+        if not self.paused:
+            self.desHeading = self.CourseBoi.is_safe(self.gpsLng, self.gpsLat, self.desHeading)
+            print(self.desHeading)
+            self.adjustRudder()
+            self.move_forward()
+
+        threading.Timer(dt, self.move_cycle).start()
+
     def move_forward(self):
-        self.compass.vesselBearing = self.CourseBoi.set_bearing(WIND_KNOTTS, self.compass.windRelNorth,self.gpsLng, self.gpsLat,self.compass.vesselBearing)
-        self.angleOfSail = self.SAK.mod360(self.compass.windRelNorth - self.compass.vesselBearing)
-        boatSpeed = abs(MAX_SPEED*sin(self.SAK.deg2rad(self.angleOfSail)))
-        if self.angleOfSail < 225 and self.angleOfSail > 135:
-            boatSpeed = -boatSpeed
-        dist = boatSpeed * dt
-        lat1 = self.SAK.deg2rad(self.gpsLat)
-        lng1 = self.SAK.deg2rad(self.gpsLng)
-        bearing = self.SAK.deg2rad(self.compass.vesselBearing)
-        lat2 = asin(sin(lat1)*cos(dist) + cos(lat1)*sin(dist)*cos(bearing))
-        lng2 = lng1 + atan2(sin(bearing)*sin(dist)*cos(lat1), cos(dist) - sin(lat1)*sin(lat2))
-        self.gpsLat, self.gpsLng = self.SAK.rad2deg(lat2), self.SAK.rad2deg(lng2)
-        threading.Timer(dt, self.move_forward).start()
+        # self.compass.vesselBearing = self.CourseBoi.set_bearing(WIND_KNOTTS, self.compass.windRelNorth,self.gpsLng, self.gpsLat,self.compass.vesselBearing)
+        self.CourseBoi.check_dist_to_target(self.gpsLat,self.gpsLng, WAYPOINT1)
+
+        if(abs(self.gpsLat - WAYPOINT1[0]) < 0.00003 and abs(self.gpsLng - WAYPOINT1[1]) < 0.00003):
+            print("satisified positional reqs")
+            self.stopped = not self.stopped
+            self.finishedLab.delete('1.0', END)
+            self.finishedLab.insert(END, "Waypoint Reached, Simulation complete")
+        if(not self.stopped):
+            self.angleOfSail = self.SAK.mod360(self.compass.windRelNorth - self.compass.vesselBearing)
+            boatSpeed = abs(self.speed*sin(self.SAK.deg2rad(self.angleOfSail)))
+            if self.angleOfSail < 225 and self.angleOfSail > 135:
+                boatSpeed = boatSpeed
+
+            dist = boatSpeed * dt
+            lat1 = self.SAK.deg2rad(self.gpsLat)
+            lng1 = self.SAK.deg2rad(self.gpsLng)
+            bearing = self.SAK.deg2rad(self.compass.vesselBearing)
+            lat2 = asin(sin(lat1)*cos(dist) + cos(lat1)*sin(dist)*cos(bearing))
+            lng2 = lng1 + atan2(sin(bearing)*sin(dist)*cos(lat1), cos(dist) - sin(lat1)*sin(lat2))
+
+            self.gpsLat, self.gpsLng = self.SAK.rad2deg(lat2), self.SAK.rad2deg(lng2)
+            self.compass.vesselBearing += -RUDDER_RESPONSE*self.rudder*self.speed*dt
+            self.compass.vesselBearing = self.SAK.mod360(self.compass.vesselBearing)
 
 
+    def gps_create_line(self, x0, y0, x1, y1, fill, width, tags):
+        self.c.create_line(*self.LatLontoXY(x0, y0), *self.LatLontoXY(x1, y1), fill=fill, width=width, tags=tags)
+
+    def drawDot(self, x1, y1, r, color, tag):
+        points = [x1, y1, x1, y1]
+        self.c.create_oval(points, fill=color, width=0, tags=tag)
+
+    def gps_drawCircle(self, lat, lng, r, color, tag):
+        phi = self.SAK.rad2deg(r/6371000.0)
+        points = [*self.LatLontoXY(lat - phi, lng - phi),
+                  *self.LatLontoXY(lat + phi, lng + phi)]
+        self.c.create_oval(points, outline=color, width=1, tags=tag)
 """
     Main loop for GUI, keeps it all spinning along
 """
@@ -244,7 +321,10 @@ root = Tk()
 root.wm_state('zoomed')
 app = LynxLakeSimulation(master = root)
 app.render()
+app.drawDot(*app.LatLontoXY(*WAYPOINT1), DOT_RADIUS, 'red', 'path')
+RADIUS = 7.0
+app.gps_drawCircle(*WAYPOINT1, RADIUS, 'red', 'path')
 app.x_prev, app.y_prev = app.LatLontoXY(app.gpsLat, app.gpsLng)
-app.move_forward()
+app.move_cycle()
 app.refreshCycle()
 app.mainloop()

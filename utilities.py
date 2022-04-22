@@ -1,4 +1,5 @@
 from math import *
+import math
 import numpy as np
 
 class Tools():
@@ -49,3 +50,45 @@ class Tools():
         rand = np.random.random(pt.shape) - 0.5
         rand *= np.array(mul)
         return pt + rand
+
+    def direction_lookup(self, lat1, lng1, lat2, lng2):
+        lat1 = self.deg2rad(lat1)
+        lng1 = self.deg2rad(lng1)
+        lat2 = self.deg2rad(lat2)
+        lng2 = self.deg2rad(lng2)
+        angle = atan2(sin(lng2 - lng1) * cos(lat2), cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lng2 - lng1))
+        return self.mod360(self.rad2deg(angle))
+
+    def sq(self, x):
+        return x*x
+
+    def Distance(self, lat1, lng1, lat2, lng2):
+        lat1 = self.deg2rad(lat1)
+        lng1 = self.deg2rad(lng1)
+        lat2 = self.deg2rad(lat2)
+        lng2 = self.deg2rad(lng2)
+        hav = self.sq(sin((lat2-lat1)/2)) + cos(lat1) * cos(lat2) * self.sq(sin((lng2-lng1)/2))
+        if hav < 0:
+            hav = 0 #shouldn't happen
+        if hav > 1:
+            hav = 1 #shouldn't happen
+        return 2 * 6371000.0 * atan2(sqrt(hav), sqrt(1-hav))
+
+    def get_slices(self, ws, stepsize=None):
+        if ws is None:
+            ws = (0, 20)
+        if isinstance(ws, (int, float)):
+            ws = [ws]
+        elif isinstance(ws, tuple) and len(ws) == 2:
+            if stepsize is None:
+                stepsize = int(round(ws[1] - ws[0]))
+            if stepsize <= 0:
+                raise PolarDiagramException("`stepsize` is nonpositive")
+            ws = list(np.linspace(ws[0], ws[1], stepsize))
+        wa = np.linspace(0, 360, 1000)
+        if self.radians:
+            wa = np.deg2rad(wa)
+        bsp = [self(np.array([w] * 1000), wa) for w in ws]
+        if not self.radians:
+            wa = np.deg2rad(wa)
+        return ws, wa, bsp
