@@ -54,10 +54,10 @@ for the duration of the program, but can be changed to test different conditions
     SCALE - This is the desired zoom factor for the simulation, a value of 1 is the default zoom. this shows the entire map with a barely visible boat. 30 is the highest zoom reccomended.
         but 20 is ideal for still seeing items in relation to the shoreline. anything higher than 30 will not reall show anything. any values inbetween 1-20 are great options.
 """
-STARTING_POS =   34.515501, -112.3849601
+STARTING_POS =   34.518501, -112.3855601
 WAYPOINT1 =   34.521701, -112.3858601
 WIND_SPEED_KNOTTS = 20
-SCALE = 10
+SCALE = 5
 #
 """
  Strict Constants:
@@ -156,7 +156,7 @@ class LynxLakeSimulation(tk.Frame):
 
 
         # self.finishedLab.insert(END, "Waypoint Reached, Simulation complete")
-        self.c = Canvas(root, width=W, height=H, bg="green", scrollregion=(0, 0, MAXW, MAXH))
+        self.c = Canvas(root, width=W, height=H, bg="#036303", scrollregion=(0, 0, MAXW, MAXH))
 
     def init_sim_conditions(self):
         """
@@ -166,7 +166,7 @@ class LynxLakeSimulation(tk.Frame):
         trueHeading = 0
         x = random.randint(360)
         trueWind = self.SAK.mod360(x)
-        trueWind = 82
+        trueWind = 180
         self.compass = Compass(trueHeading, trueWind)
         self.gpsLat, self.gpsLng = STARTING_POS
         self.gpsLatPrev, self.gpsLngPrev = self.gpsLat, self.gpsLng
@@ -219,7 +219,7 @@ class LynxLakeSimulation(tk.Frame):
             lon,lat = self.LatLontoXY(self.boundaryArrayLat[i], self.boundaryArrayLon[i])
             self.bound.append(lon)
             self.bound.append(lat)
-        self.c.create_polygon(self.bound, fill = 'blue', outline = 'green', width = 2, tags = 'boundary')
+        self.c.create_polygon(self.bound, fill = '#006994', outline = '#036303', width = 2, tags = 'boundary')
 
     def pause(self):
         """

@@ -73,22 +73,3 @@ class Tools():
         if hav > 1:
             hav = 1 #shouldn't happen
         return 2 * 6371000.0 * atan2(sqrt(hav), sqrt(1-hav))
-
-    def get_slices(self, ws, stepsize=None):
-        if ws is None:
-            ws = (0, 20)
-        if isinstance(ws, (int, float)):
-            ws = [ws]
-        elif isinstance(ws, tuple) and len(ws) == 2:
-            if stepsize is None:
-                stepsize = int(round(ws[1] - ws[0]))
-            if stepsize <= 0:
-                raise PolarDiagramException("`stepsize` is nonpositive")
-            ws = list(np.linspace(ws[0], ws[1], stepsize))
-        wa = np.linspace(0, 360, 1000)
-        if self.radians:
-            wa = np.deg2rad(wa)
-        bsp = [self(np.array([w] * 1000), wa) for w in ws]
-        if not self.radians:
-            wa = np.deg2rad(wa)
-        return ws, wa, bsp

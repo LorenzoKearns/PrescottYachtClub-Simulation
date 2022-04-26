@@ -11,6 +11,7 @@ import hrosailing.polardiagram as pol
 import hrosailing.pipeline as pipe
 import hrosailing.cruising as sail
 import hrosailing.pipelinecomponents as pcomp
+from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
 from utilities import Tools
 import numpy as np
@@ -28,7 +29,7 @@ class WayFinder():
     """
     def __init__(self):
         self.SAK = Tools()
-        self.pd = pol.from_csv("testdata.csv", fmt="hro").symmetrize()
+        self.pd = pol.from_csv("A21.csv", fmt="opencpn").symmetrize()
         data = np.array([
             self.SAK.random_shifted_pt([ws, wa, self.pd.boat_speeds[i, j]], [10, 5, 2])
             for i, ws in enumerate(self.pd.wind_angles)
@@ -38,13 +39,19 @@ class WayFinder():
         self.data = data[np.random.choice(len(data), size=500)]
         self.pd = self.create_polar()
 
+
+
     def create_polar(self):
         """
             Creates polar charts, from data sets
         """
-        ws = [6, 8, 10, 12, 14, 16, 20]
-        self.pd.plot_polar(ws=ws, ax=plt.subplot(1, 2, 1, projection="polar"))
-        self.pd.plot_convex_hull(ws=ws, ax=plt.subplot(1, 2, 2, projection="polar"))
+        ws = [4, 6, 8, 10, 12, 14, 16, 20]
+        # ws = [4, 6, 8, 10, 12, 14, 16, 20]
+        # self.pd.plot_polar(ws=ws, ax=plt.subplot(1, 2, 1, projection="polar"))
+        # self.pd.plot_flat(ws=ws, ax=plt.subplot(1, 2, 2))
+        #
+        # plt.show()
+        # print(self.pd)
         return self.pd
 
     def get_ideal_bearing(self, TWS, dir):
@@ -59,12 +66,7 @@ class WayFinder():
 
     def create_lookup_table(self, ws):
         _, wa, bsp, *sails = self.pd.get_slices(ws)
-        wa = [self.SAK.rad2deg(w) for w in wa]
-        # wa = [:,0]
-        # wa = np.array(wa)
-        # bsp = [:,0]
-        # bsp = np.array(bsp)
-        # spdLookup = np.array(wa,bsp)
-        # print(spdLookup)
-        # print(wa)
-        # print(bsp)
+        # wa = [self.SAK.rad2deg(w) for w in wa]
+        bsp = bsp.ravel()
+        wa = np.rad2deg(wa)
+        return wa, bsp

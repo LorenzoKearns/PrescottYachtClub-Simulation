@@ -44,7 +44,6 @@ class Cartographer():
     def init_geopands(self):
         # Create GeoDataFrame
         lynxLake = gpd.GeoDataFrame([self.lakeEdges], geometry='geometry', crs={'init': 'epsg:4326'}, columns=['geometry'])
-
         # Print
         # print(lynxLake)
 

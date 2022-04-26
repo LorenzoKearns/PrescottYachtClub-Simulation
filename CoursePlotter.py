@@ -32,7 +32,7 @@ class CoursePlotter():
         self.currBear = 0
         self.desBear = 0
         self.Way = WayFinder()
-        self.Map = Cartographer(100)
+        self.Map = Cartographer(50)
         self.SAK = Tools()
         self.mode = "straight"
         self.final_adjust = False
@@ -64,7 +64,7 @@ class CoursePlotter():
         if(not self.weAreGettingJibbyWithIt and not self.tacAnBád):
             bearing = self.is_safe(x, y, currBearing)
         elif(self.weAreGettingJibbyWithIt):
-            print(self.desBear)
+            # print(self.desBear) # Testing statement
             bearing = self.jibe_away_homie(currBearing)
         elif(self.tacAnBád):
             bearing = time_to_tack_fam(currBearing)
@@ -261,8 +261,8 @@ class CoursePlotter():
         return self.dist
 
     def define_speed(self, TWS):
-        self.Way.create_lookup_table(TWS)
-
+        wa, bsp = self.Way.create_lookup_table(TWS)
+        return wa, bsp
 
 
 # """
